@@ -1,0 +1,36 @@
+name: Publicar Central no GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v6
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Preparar arquivos públicos
+        run: python3 build_pages.py
+      - name: Enviar site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
