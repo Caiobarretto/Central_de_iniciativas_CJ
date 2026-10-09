@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: central-controladoria-cj
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --limit-request-line 4094
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: REQUIRE_POSTGRES
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: RPA_WORKER_TOKEN
+        sync: false
+      - key: RPA_QUEUE_KEY
+        sync: false
+      - key: RPA_TEAM_TOKEN
+        sync: false
