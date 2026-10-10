@@ -26,6 +26,7 @@ SECURE_COOKIE = os.environ.get('COOKIE_SECURE', 'true').lower() == 'true'
 
 from database import connect_database
 import access_auth as sso_auth
+import users_directory
 
 
 def connect():
@@ -154,7 +155,7 @@ def application(environ,start_response):
             return rpa_queue.handle(environ,respond,connect,PUBLIC_URL)
         if method=='GET' and path.startswith('/ferramentas/'):
             file=(ROOT/path.lstrip('/')).resolve()
-            if ROOT.resolve() not in file.parents or not file.is_file() or file.suffix not in ['.html','.js','.py','.wasm','.zip','.json']:return respond('404 Not Found',{'error':'Arquivo não encontrado.'})
+            if (ROOT/'ferramentas').resolve() not in file.parents or not file.is_file() or file.suffix not in ['.html','.js','.py','.wasm','.zip','.json']:return respond('404 Not Found',{'error':'Arquivo não encontrado.'})
             import mimetypes
             body=file.read_bytes();mime=mimetypes.guess_type(str(file))[0] or 'application/octet-stream'
             start_response('200 OK',headers+[('Content-Type',mime),('Content-Length',str(len(body)))]);return [body]
@@ -163,6 +164,23 @@ def application(environ,start_response):
             file=ROOT/('favicon.png' if path=='/favicon.png' else 'credenciais.html' if path=='/carregando' else 'index.html')
             body=file.read_bytes();mime='image/png' if path=='/favicon.png' else 'text/html; charset=utf-8'
             start_response('200 OK',headers+[('Content-Type',mime),('Content-Length',str(len(body)))]);return [body]
+        if path in ['/api/admin/users','/api/admin/email-delivery']:
+            active=session(environ)
+            if not active:return respond('401 Unauthorized',{'error':'Entre como administrador.'})
+            if method=='GET':
+                if path.endswith('/users'):return respond('200 OK',users_directory.read(connect))
+                import email_auth
+                return respond('200 OK',email_auth.delivery_diagnostics(connect,parse_qs(environ.get('QUERY_STRING','')).get('id',[''])[0]))
+            if method!='POST' or path!='/api/admin/users':return respond('405 Method Not Allowed')
+            if environ.get('HTTP_ORIGIN')!=PUBLIC_URL or not hmac.compare_digest(environ.get('HTTP_X_CSRF_TOKEN',''),active[1]):return respond('403 Forbidden',{'error':'Sessão ou origem inválida.'})
+            try:
+                length=int(environ.get('CONTENT_LENGTH') or 0)
+                if not 0<length<=20000 or 'application/json' not in environ.get('CONTENT_TYPE',''):raise ValueError('Dados inválidos.')
+                data=json.loads(environ['wsgi.input'].read(length))
+                if not isinstance(data,dict):raise ValueError('Dados inválidos.')
+                status,out=users_directory.mutate(connect,data)
+            except (ValueError,UnicodeDecodeError) as e:return respond('400 Bad Request',{'error':str(e) or 'Dados inválidos.'})
+            return respond(str(status)+(' OK' if status==200 else ' Conflict' if status==409 else ' Not Found'),out)
         if method=='GET' and path=='/api/session':
             active=session(environ);return respond('200 OK',{'authenticated':bool(active),'csrf':active[1] if active else ''})
         if method=='GET' and path=='/api/data':
@@ -234,6 +252,7 @@ if __name__=='__main__':
     import rpa_queue
     rpa_queue.setup(connect)
     sso_auth.setup(connect)
+    users_directory.setup(connect)
     from wsgiref.simple_server import make_server
     SECURE_COOKIE=False
     print('Abra http://localhost:8000 — servidor local para teste.')
@@ -243,3 +262,4 @@ else:
     import rpa_queue
     rpa_queue.setup(connect)
     sso_auth.setup(connect)
+    users_directory.setup(connect)
