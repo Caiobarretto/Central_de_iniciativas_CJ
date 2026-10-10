@@ -27,6 +27,7 @@ SECURE_COOKIE = os.environ.get('COOKIE_SECURE', 'true').lower() == 'true'
 from database import connect_database
 import access_auth as sso_auth
 import users_directory
+import admin_access
 
 
 def connect():
@@ -59,6 +60,8 @@ def initialize():
 
 
 def session(environ):
+    identity=sso_auth.current(environ,connect)
+    if not admin_access.allowed(identity,connect):return None
     try:
         cookie = SimpleCookie(environ.get('HTTP_COOKIE', ''))
         token = cookie['cj_session'].value
@@ -67,7 +70,8 @@ def session(environ):
     token = hashlib.sha256(token.encode()).hexdigest()
     with connect() as con:
         row = con.execute('SELECT csrf,expires FROM sessions WHERE token=?', (token,)).fetchone()
-    return (token, row[0]) if row and row[1] > time.time() else None
+        bound=con.execute('SELECT email FROM admin_session_profiles WHERE token=?',(token,)).fetchone()
+    return (token, row[0]) if row and row[1] > time.time() and bound and bound[0]==identity['email'].lower() else None
 
 
 def valid_data(data):
@@ -138,7 +142,11 @@ def application(environ,start_response):
     method=environ.get('REQUEST_METHOD','GET');path=environ.get('PATH_INFO','/')
     try:
         if path.startswith('/auth/') or path=='/api/me':
-            return sso_auth.handle(environ,respond,connect)
+            def identity_response(status,obj=None,extra=None):
+                if path=='/api/me' and isinstance(obj,dict) and obj.get('user'):
+                    obj['user']['canAdmin']=admin_access.allowed(obj['user'],connect)
+                return respond(status,obj,extra)
+            return sso_auth.handle(environ,identity_response,connect)
         if sso_auth.enabled() and method=='GET' and path in ['/','/index.html']:
             body=(ROOT/'login.html').read_bytes()
             start_response('200 OK',headers+[('Content-Type','text/html; charset=utf-8'),('Content-Length',str(len(body)))])
@@ -164,25 +172,29 @@ def application(environ,start_response):
             file=ROOT/('favicon.png' if path=='/favicon.png' else 'credenciais.html' if path=='/carregando' else 'index.html')
             body=file.read_bytes();mime='image/png' if path=='/favicon.png' else 'text/html; charset=utf-8'
             start_response('200 OK',headers+[('Content-Type',mime),('Content-Length',str(len(body)))]);return [body]
-        if path in ['/api/admin/users','/api/admin/email-delivery']:
+        if path.startswith('/api/admin/') or path=='/api/login' or (path=='/api/data' and method=='POST'):
+            if not admin_access.allowed(sso_auth.current(environ,connect),connect):
+                return respond('403 Forbidden',{'error':'Este perfil não tem permissão para administrar a Central.'})
+        if path in ['/api/admin/users','/api/admin/email-delivery','/api/admin/access']:
             active=session(environ)
             if not active:return respond('401 Unauthorized',{'error':'Entre como administrador.'})
             if method=='GET':
                 if path.endswith('/users'):return respond('200 OK',users_directory.read(connect))
+                if path.endswith('/access'):return respond('200 OK',admin_access.read(connect))
                 import email_auth
                 return respond('200 OK',email_auth.delivery_diagnostics(connect,parse_qs(environ.get('QUERY_STRING','')).get('id',[''])[0]))
-            if method!='POST' or path!='/api/admin/users':return respond('405 Method Not Allowed')
+            if method!='POST' or path not in ['/api/admin/users','/api/admin/access']:return respond('405 Method Not Allowed')
             if environ.get('HTTP_ORIGIN')!=PUBLIC_URL or not hmac.compare_digest(environ.get('HTTP_X_CSRF_TOKEN',''),active[1]):return respond('403 Forbidden',{'error':'Sessão ou origem inválida.'})
             try:
                 length=int(environ.get('CONTENT_LENGTH') or 0)
                 if not 0<length<=20000 or 'application/json' not in environ.get('CONTENT_TYPE',''):raise ValueError('Dados inválidos.')
                 data=json.loads(environ['wsgi.input'].read(length))
                 if not isinstance(data,dict):raise ValueError('Dados inválidos.')
-                status,out=users_directory.mutate(connect,data)
+                status,out=admin_access.mutate(connect,data) if path.endswith('/access') else users_directory.mutate(connect,data)
             except (ValueError,UnicodeDecodeError) as e:return respond('400 Bad Request',{'error':str(e) or 'Dados inválidos.'})
             return respond(str(status)+(' OK' if status==200 else ' Conflict' if status==409 else ' Not Found'),out)
         if method=='GET' and path=='/api/session':
-            active=session(environ);return respond('200 OK',{'authenticated':bool(active),'csrf':active[1] if active else ''})
+            active=session(environ);return respond('200 OK',{'authenticated':bool(active),'csrf':active[1] if active else '', 'canAdmin':admin_access.allowed(sso_auth.current(environ,connect),connect)})
         if method=='GET' and path=='/api/data':
             with connect() as con:
                 revision=con.execute('SELECT revision FROM state WHERE id=1').fetchone()[0]
@@ -227,6 +239,8 @@ def application(environ,start_response):
                 con.execute('DELETE FROM attempts WHERE key=?',(key,));con.execute('DELETE FROM sessions WHERE expires<?',(now,))
                 token=secrets.token_urlsafe(40);csrf=secrets.token_urlsafe(32)
                 con.execute('INSERT INTO sessions VALUES (?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),csrf,now+8*3600))
+                identity=sso_auth.current(environ,connect)
+                con.execute('INSERT INTO admin_session_profiles VALUES (?,?)',(hashlib.sha256(token.encode()).hexdigest(),identity['email'].lower()))
             return respond('200 OK',{'csrf':csrf},[('Set-Cookie','cj_session='+token+'; Max-Age=28800'+cookie_base)])
         if not valid_data(data):return respond('400 Bad Request',{'error':'O catálogo ou relatório contém dados inválidos.'})
         with connect() as con:
@@ -253,6 +267,7 @@ if __name__=='__main__':
     rpa_queue.setup(connect)
     sso_auth.setup(connect)
     users_directory.setup(connect)
+    admin_access.setup(connect)
     from wsgiref.simple_server import make_server
     SECURE_COOKIE=False
     print('Abra http://localhost:8000 — servidor local para teste.')
@@ -263,3 +278,4 @@ else:
     rpa_queue.setup(connect)
     sso_auth.setup(connect)
     users_directory.setup(connect)
+    admin_access.setup(connect)
