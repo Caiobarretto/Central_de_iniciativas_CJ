@@ -149,7 +149,7 @@ def application(environ,start_response):
             if not identity:
                 if method=='GET' and path in ['/central','/carregando']:
                     return respond('302 Found',extra=[('Location','/')])
-                return respond('401 Unauthorized',{'error':'Entre com seu e-mail corporativo QCA.'})
+                return respond('401 Unauthorized',{'error':'Selecione seu perfil para acessar a Central.'})
         if path.startswith('/api/rpa/'):
             import rpa_queue
             return rpa_queue.handle(environ,respond,connect,PUBLIC_URL)

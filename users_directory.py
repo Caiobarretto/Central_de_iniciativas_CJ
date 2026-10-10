@@ -1,7 +1,7 @@
 """Cadastro compartilhado; somente nome/e-mail são expostos antes do login."""
 import json,re,secrets
 from pathlib import Path
-FIELDS=('name','email','costCenter','unit','subunit','leader','role','company')
+FIELDS=('name','email','costCenter','unit','subunit','leader','role','company','servicesForTeams','employment')
 
 def validate(user):
     if not isinstance(user,dict):raise ValueError('Cadastro inválido.')
@@ -26,6 +26,18 @@ def setup(connect):
                 u=validate(u);uid=secrets.token_urlsafe(16)
                 c.execute('INSERT INTO directory_users VALUES (?,?,?)',(uid,u['email'],json.dumps(u,ensure_ascii=False)))
             c.execute('UPDATE directory_meta SET version=1 WHERE id=1')
+        # Completa apenas os dois novos campos ausentes em cadastros anteriores.
+        source=Path(__file__).with_name('users_seed.json')
+        seeds={u['email']:u for u in json.loads(source.read_text(encoding='utf-8'))} if source.exists() else {}
+        changed=False
+        for uid,email,raw in c.execute('SELECT id,email,data FROM directory_users').fetchall():
+            user=json.loads(raw);seed=seeds.get(email,{})
+            missing=[k for k in ('servicesForTeams','employment') if k not in user]
+            if missing:
+                for k in missing:user[k]=seed.get(k,'')
+                c.execute('UPDATE directory_users SET data=? WHERE id=?',(json.dumps(user,ensure_ascii=False),uid));changed=True
+        if changed:c.execute('UPDATE directory_meta SET version=version+1 WHERE id=1')
+
 
 def find(c,email):
     row=c.execute('SELECT id,data FROM directory_users WHERE email=?',(email,)).fetchone()
@@ -69,6 +81,7 @@ def mutate(connect,data):
         elif not uid:raise ValueError('Selecione um usuário para excluir.')
         else:c.execute('DELETE FROM directory_users WHERE id=?',(uid,))
         if old and (not u or not u['active'] or old[0]!=u['email']):
+            c.execute('DELETE FROM profile_sessions WHERE email=?',(old[0],))
             c.execute('DELETE FROM email_sessions WHERE email=?',(old[0],));c.execute('DELETE FROM email_challenges WHERE email=?',(old[0],))
         c.execute('UPDATE directory_meta SET version=? WHERE id=1',(version+1,))
     return 200,{'ok':True,'version':version+1,'id':uid}

@@ -8,7 +8,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "AMANDA TAYANE SILVA GALDINO | QCA",
@@ -19,7 +21,9 @@
     "subunit": "NAC",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "ANA LETICIA DE FREITAS CALDAS DE SOUZA | QCA",
@@ -30,7 +34,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "CAIO COSTA BARRETTO | QCA",
@@ -41,7 +47,9 @@
     "subunit": "COORDENAÇÃO",
     "leader": "LAIS SOUZA",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "CRISLAYNE FARIAS VIEIRA | QCA",
@@ -52,7 +60,9 @@
     "subunit": "NAC",
     "leader": "LAYS GISELLE",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "CRISTHIANA FREIRE QUINTINO C DA SILVA | QCA",
@@ -63,7 +73,9 @@
     "subunit": "CERTIDÕES",
     "leader": "DANIELLE RODRIGUES",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "DANIELLE DA SILVA RODRIGUES | QCA",
@@ -74,7 +86,9 @@
     "subunit": "LIDERANÇA",
     "leader": "LAIS SOUZA",
     "role": "SUPERVISORA DE SERVICOS",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "DAPHINNY THAIANNY MOREIRA DA SILVA | QCA",
@@ -85,7 +99,9 @@
     "subunit": "CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "DEBORAH VITORIA DE OLIVEIRA DA SILVA | QCA",
@@ -96,7 +112,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "ESTER BEATRIZ SILVA DE OLIVEIRA | QCA",
@@ -107,7 +125,9 @@
     "subunit": "BATIMENTO DE PAUTA E AUDITORIA DE SERVIÇOS",
     "leader": "RAYANNE ROCHA",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "INGRID FONSECA DOURADO | QCA",
@@ -118,7 +138,9 @@
     "subunit": "GESTÃO DE CORRESPONDENTES",
     "leader": "RAYANNE ROCHA",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "INGRID VASTIL DE PAIVA | QCA",
@@ -129,7 +151,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "JADIELLE RIBEIRO FERREIRA DA SILVA | QCA",
@@ -140,7 +164,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "JEFERSON BIRLO DE ARAUJO | QCA",
@@ -151,7 +177,9 @@
     "subunit": "TRATAMENTO DA PISCINA DE PUBLICAÇÃO E INTIMAÇÃO",
     "leader": "LAYS GISELLE",
     "role": "ASSISTENTE JURIDICO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "JESSICA GOMES DE MELO | QCA",
@@ -162,7 +190,9 @@
     "subunit": "GESTÃO DE CORRESPONDENTES",
     "leader": "RAYANNE ROCHA",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "BAHIA"
+    "company": "BAHIA",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "JOAO VITOR PAZ DE OLIVEIRA SOARES | QCA",
@@ -173,7 +203,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "JONATAN COSTA MARQUES | QCA",
@@ -184,7 +216,9 @@
     "subunit": "TRATAMENTO DA PISCINA DE PUBLICAÇÃO E INTIMAÇÃO",
     "leader": "LAYS GISELLE",
     "role": "ADVOGADO(A)",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ASSOCIADO(A)"
   },
   {
     "name": "JULIO CEZAR DA CUNHA SILVA FILHO | QCA",
@@ -195,7 +229,9 @@
     "subunit": "GESTÃO DE CORRESPONDENTES",
     "leader": "RAYANNE ROCHA",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "KARLLA MIRANDA MORAES | QCA",
@@ -206,7 +242,9 @@
     "subunit": "CERTIDÕES",
     "leader": "DANIELLE RODRIGUES",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "KHETYLLEY ROMANA RAMOS DA SILVA | QCA",
@@ -217,7 +255,9 @@
     "subunit": "REVISÃO DE CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "LAILA DA SILVA MOREIRA | QCA",
@@ -228,7 +268,9 @@
     "subunit": "RETORNO DE ATAS",
     "leader": "RAYANNE ROCHA",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "LAIS SOUZA GOMES DA SILVA | QCA",
@@ -239,7 +281,9 @@
     "subunit": "LIDERANÇA",
     "leader": "CHRISTIANNE GOMES",
     "role": "COORD CONTROLADORIA JURIDICA",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "LAYLA MICHELE DA COSTA DE MENEZES | QCA",
@@ -250,7 +294,9 @@
     "subunit": "TRATAMENTO DA PISCINA DE PUBLICAÇÃO E INTIMAÇÃO",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "LAYS GISELLE TEIXEIRA CAMPOS | QCA",
@@ -261,7 +307,9 @@
     "subunit": "LIDERANÇA",
     "leader": "LAIS SOUZA",
     "role": "SUPERVISORA DE SERVICOS",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "LETICIA AMELIA SANTOS DE SANTANA | QCA",
@@ -272,7 +320,9 @@
     "subunit": "NAC",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "MARIA ARIELLY DA SILVA | QCA",
@@ -283,7 +333,9 @@
     "subunit": "BATIMENTO DE PAUTA E AUDITORIA DE SERVIÇOS",
     "leader": "RAYANNE ROCHA",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "PEDRO CORREA FERREIRA | QCA",
@@ -294,7 +346,9 @@
     "subunit": "COORDENAÇÃO",
     "leader": "LAIS SOUZA",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "PIETRA LAIS MARQUES DE ANDRADE | QCA",
@@ -305,7 +359,9 @@
     "subunit": "CADASTRO",
     "leader": "DANIELLE RODRIGUES",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "RAFAEL LEVINO ARAUJO DE MACEDO | QCA",
@@ -316,7 +372,9 @@
     "subunit": "LIDERANÇA",
     "leader": "CHRISTIANNE GOMES",
     "role": "ADVOGADO(A)",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "SOCIO (A)"
   },
   {
     "name": "RAFAELA PEREIRA DA SILVA | QCA",
@@ -327,7 +385,9 @@
     "subunit": "GESTÃO DE CORRESPONDENTES",
     "leader": "RAYANNE ROCHA",
     "role": "ASSISTENTE ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "RAISSA RAMALHO SALES CORREIA | QCA",
@@ -338,7 +398,9 @@
     "subunit": "NAC",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "RAYANNE AURORA ALVES DA ROCHA OLIVEIRA | QCA",
@@ -349,7 +411,9 @@
     "subunit": "LIDERANÇA",
     "leader": "LAIS SOUZA",
     "role": "SUPERVISORA DE SERVICOS",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "STELA MARIANA TIAGO SANTOS | QCA",
@@ -360,7 +424,9 @@
     "subunit": "BATIMENTO DE PAUTA E AUDITORIA DE SERVIÇOS",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "TAYNÃ LUIZE VIANA DOS SANTOS | QCA",
@@ -371,7 +437,9 @@
     "subunit": "NAC",
     "leader": "LAYS GISELLE",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "CELETISTA"
   },
   {
     "name": "THAIANE VITORIA BARBOSA DA SILVA | QCA",
@@ -382,7 +450,9 @@
     "subunit": "BATIMENTO DE PAUTA E AUDITORIA DE SERVIÇOS",
     "leader": "RAYANNE ROCHA",
     "role": "ESTAGIARIO(A) EM ADMINISTRACAO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   },
   {
     "name": "THALYTA RODRIGUES DE FRAGA | QCA",
@@ -393,7 +463,9 @@
     "subunit": "GESTÃO DE CORRESPONDENTES",
     "leader": "RAYANNE ROCHA",
     "role": "JOVEM APRENDIZ",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "NÃO",
+    "employment": "CELETISTA"
   },
   {
     "name": "WELLINGTON LEONARDO DA SILVA | QCA",
@@ -404,6 +476,8 @@
     "subunit": "BATIMENTO DE PAUTA E AUDITORIA DE SERVIÇOS",
     "leader": "RAYANNE ROCHA",
     "role": "AUX ADMINISTRATIVO",
-    "company": "PERNAMBUCO"
+    "company": "PERNAMBUCO",
+    "servicesForTeams": "SIM",
+    "employment": "ESTAGIARIO(A)"
   }
 ]
