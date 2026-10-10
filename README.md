@@ -1,3 +1,11 @@
+## Versão atual: acesso por código de e-mail
+
+Siga [CONFIGURAR_LOGIN_EMAIL.md](CONFIGURAR_LOGIN_EMAIL.md). Mantém o layout enviado, o nome/e-mail no cabeçalho e lembra o acesso por 30 dias. O envio usa API HTTPS Brevo e depende de remetente validado. Não exige Microsoft Entra.
+
+## Atualização: login Microsoft
+
+Veja [CONFIGURAR_SSO_MICROSOFT.md](CONFIGURAR_SSO_MICROSOFT.md). O SSO depende do registro da aplicação no Entra da QCA e é ativado por SSO_ENABLED=true. Sem essa ativação, o comportamento anterior é mantido.
+
 # Central da Controladoria Jurídica — QCA
 
 Abra `GUIA_CONFIGURACAO.html` no navegador para o passo a passo completo.

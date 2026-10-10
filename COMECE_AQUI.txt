@@ -1,3 +1,5 @@
+ATUALIZAÇÃO: para o login por código, leia primeiro CONFIGURAR_LOGIN_EMAIL.md.
+
 Abra GUIA_CONFIGURACAO.html no navegador.
 Ele explica GitHub, Neon Free, Render Free, computador anfitrião e testes finais.
 Para o time, somente navegador; instalação do robô apenas no computador anfitrião.

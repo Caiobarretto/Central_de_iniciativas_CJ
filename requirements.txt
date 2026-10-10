@@ -1,3 +1,5 @@
 gunicorn>=23.0,<24.0
 psycopg[binary]>=3.2,<4.0
 cryptography>=44,<47
+msal>=1.31,<2
+PyJWT[crypto]>=2.10,<3

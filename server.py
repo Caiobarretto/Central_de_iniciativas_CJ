@@ -20,11 +20,12 @@ DB = DATA / 'central.sqlite3'
 MAX_BODY = 100_000_000
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
 PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
-PUBLIC_URL = os.environ.get('PUBLIC_URL', '').rstrip('/')
+PUBLIC_URL = os.environ.get('PUBLIC_URL', '').strip().rstrip('/')
 SECURE_COOKIE = os.environ.get('COOKIE_SECURE', 'true').lower() == 'true'
 
 
 from database import connect_database
+import access_auth as sso_auth
 
 
 def connect():
@@ -135,6 +136,19 @@ def application(environ,start_response):
         return [body]
     method=environ.get('REQUEST_METHOD','GET');path=environ.get('PATH_INFO','/')
     try:
+        if path.startswith('/auth/') or path=='/api/me':
+            return sso_auth.handle(environ,respond,connect)
+        if sso_auth.enabled() and method=='GET' and path in ['/','/index.html']:
+            body=(ROOT/'login.html').read_bytes()
+            start_response('200 OK',headers+[('Content-Type','text/html; charset=utf-8'),('Content-Length',str(len(body)))])
+            return [body]
+        worker_route=path in ['/api/rpa/worker/claim','/api/rpa/worker/report']
+        if sso_auth.enabled() and path not in ['/health','/favicon.png'] and not worker_route:
+            identity=sso_auth.current(environ,connect)
+            if not identity:
+                if method=='GET' and path in ['/central','/carregando']:
+                    return respond('302 Found',extra=[('Location','/')])
+                return respond('401 Unauthorized',{'error':'Entre com seu e-mail corporativo QCA.'})
         if path.startswith('/api/rpa/'):
             import rpa_queue
             return rpa_queue.handle(environ,respond,connect,PUBLIC_URL)
@@ -144,9 +158,9 @@ def application(environ,start_response):
             import mimetypes
             body=file.read_bytes();mime=mimetypes.guess_type(str(file))[0] or 'application/octet-stream'
             start_response('200 OK',headers+[('Content-Type',mime),('Content-Length',str(len(body)))]);return [body]
-        if method=='GET' and path in ['/','/index.html','/favicon.png','/health']:
+        if method=='GET' and path in ['/','/index.html','/central','/carregando','/favicon.png','/health']:
             if path=='/health':return respond('200 OK',{'ok':True})
-            file=ROOT/('favicon.png' if path=='/favicon.png' else 'index.html')
+            file=ROOT/('favicon.png' if path=='/favicon.png' else 'credenciais.html' if path=='/carregando' else 'index.html')
             body=file.read_bytes();mime='image/png' if path=='/favicon.png' else 'text/html; charset=utf-8'
             start_response('200 OK',headers+[('Content-Type',mime),('Content-Length',str(len(body)))]);return [body]
         if method=='GET' and path=='/api/session':
@@ -219,6 +233,7 @@ if __name__=='__main__':
     initialize()
     import rpa_queue
     rpa_queue.setup(connect)
+    sso_auth.setup(connect)
     from wsgiref.simple_server import make_server
     SECURE_COOKIE=False
     print('Abra http://localhost:8000 — servidor local para teste.')
@@ -227,3 +242,4 @@ else:
     initialize()
     import rpa_queue
     rpa_queue.setup(connect)
+    sso_auth.setup(connect)
