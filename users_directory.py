@@ -82,6 +82,7 @@ def mutate(connect,data):
         else:c.execute('DELETE FROM directory_users WHERE id=?',(uid,))
         if old and (not u or not u['active'] or old[0]!=u['email']):
             c.execute('DELETE FROM profile_sessions WHERE email=?',(old[0],))
+            if not u or old[0]!=u['email']:c.execute('DELETE FROM profile_photos WHERE email=?',(old[0],))
             c.execute('DELETE FROM email_sessions WHERE email=?',(old[0],));c.execute('DELETE FROM email_challenges WHERE email=?',(old[0],))
         c.execute('UPDATE directory_meta SET version=? WHERE id=1',(version+1,))
     return 200,{'ok':True,'version':version+1,'id':uid}

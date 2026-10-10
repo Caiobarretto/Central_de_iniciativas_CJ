@@ -1,5 +1,5 @@
 """Seleção de perfil por e-mail cadastrado; não autentica a conta Microsoft."""
-import hashlib,hmac,json,os,secrets,time
+import base64,hashlib,hmac,json,os,secrets,time
 from http.cookies import SimpleCookie
 import users_directory
 AGE=30*86400
@@ -11,7 +11,9 @@ def cookie(env,name):
     except (KeyError,ValueError):return ''
 def setcookie(name,value,age):return ('Set-Cookie',f'{name}={value}; Path=/; Max-Age={age}; HttpOnly; Secure; SameSite=Lax')
 def setup(connect):
-    with connect() as c:c.execute('CREATE TABLE IF NOT EXISTS profile_sessions (id TEXT PRIMARY KEY,email TEXT NOT NULL,csrf TEXT NOT NULL,expires DOUBLE PRECISION NOT NULL)')
+    with connect() as c:
+        c.execute('CREATE TABLE IF NOT EXISTS profile_sessions (id TEXT PRIMARY KEY,email TEXT NOT NULL,csrf TEXT NOT NULL,expires DOUBLE PRECISION NOT NULL)')
+        c.execute('CREATE TABLE IF NOT EXISTS profile_photos (email TEXT PRIMARY KEY,data TEXT NOT NULL)')
 def current(env,connect):
     token=cookie(env,'cj_profile')
     if not token:return None
@@ -19,7 +21,8 @@ def current(env,connect):
         row=c.execute('SELECT email,csrf,expires FROM profile_sessions WHERE id=?',(hashed(token),)).fetchone()
         if not row or row[2]<=time.time():return None
         profile=users_directory.find(c,row[0])
-    return {'name':profile['name'],'email':profile['email'],'csrf':row[1],'profile':profile} if profile else None
+        photo=c.execute('SELECT data FROM profile_photos WHERE email=?',(row[0],)).fetchone()
+    return {'name':profile['name'],'email':profile['email'],'csrf':row[1],'profile':profile,'photo':photo[0] if photo else ''} if profile else None
 
 def clear_admin(env,connect):
     token=cookie(env,'cj_session')
@@ -31,9 +34,29 @@ def handle(env,respond,connect):
     if method=='GET' and path=='/api/me':return respond('200 OK',{'enabled':True,'mode':'profile','verified':False,'user':current(env,connect)})
     if method=='GET' and path=='/auth/directory':return respond('200 OK',{'users':users_directory.public(connect)})
     if method=='GET' and path=='/auth/login':return respond('302 Found',extra=[('Location','/')])
-    if method!='POST' or path not in ('/auth/profile/select','/auth/logout'):return respond('404 Not Found',{'error':'Endereço não encontrado.'})
+    if method!='POST' or path not in ('/auth/profile/select','/auth/profile/photo','/auth/logout'):return respond('404 Not Found',{'error':'Endereço não encontrado.'})
     expected=os.environ.get('PUBLIC_URL','').strip().rstrip('/')
     if not expected.startswith('https://') or env.get('HTTP_ORIGIN')!=expected:return respond('403 Forbidden',{'error':'Origem da solicitação inválida.'})
+    if path=='/auth/profile/photo':
+        user=current(env,connect)
+        if not user or not hmac.compare_digest(env.get('HTTP_X_CSRF_TOKEN',''),user['csrf']):return respond('403 Forbidden',{'error':'Perfil inválido.'})
+        try:
+            length=int(env.get('CONTENT_LENGTH') or 0)
+            if not 0<length<=560000 or 'application/json' not in env.get('CONTENT_TYPE',''):raise ValueError()
+            data=json.loads(env['wsgi.input'].read(length))
+            photo=data.get('photo') if isinstance(data,dict) else None
+            if not isinstance(photo,str):raise ValueError()
+            if photo:
+                if not photo.startswith('data:image/jpeg;base64,'):raise ValueError()
+                binary=base64.b64decode(photo.split(',',1)[1],validate=True)
+                if not 10<len(binary)<=400000 or not binary.startswith(b'\xff\xd8\xff') or not binary.endswith(b'\xff\xd9'):raise ValueError()
+        except (ValueError,UnicodeDecodeError):return respond('400 Bad Request',{'error':'Foto inválida. Use uma imagem JPEG de até 400 KB após o tratamento.'})
+        with connect() as c:
+            c.execute('LOCK TABLE directory_meta IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
+            if not users_directory.find(c,user['email']):return respond('403 Forbidden',{'error':'Perfil desativado.'})
+            if photo:c.execute('INSERT INTO profile_photos VALUES (?,?) ON CONFLICT (email) DO UPDATE SET data=excluded.data',(user['email'],photo))
+            else:c.execute('DELETE FROM profile_photos WHERE email=?',(user['email'],))
+        return respond('200 OK',{'ok':True,'photo':photo})
     if path=='/auth/logout':
         user=current(env,connect)
         if not user or not hmac.compare_digest(env.get('HTTP_X_CSRF_TOKEN',''),user['csrf']):return respond('403 Forbidden',{'error':'Perfil inválido.'})
