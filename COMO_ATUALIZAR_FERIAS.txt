@@ -1,0 +1,109 @@
+AJUSTE DESTA VERSÃO — FÉRIAS VINCULADAS AO USUÁRIO
+Se já publicou o calendário, substitua estes três arquivos na raiz do GitHub:
+index.html, server.py e vacations.py. Faça um único commit e aguarde o Render.
+Não é necessário mudar variáveis de ambiente, requisitos, robôs ou a planilha/base inicial.
+A publicação mantém os períodos e demais edições já salvos no banco.
+
+VÍNCULO COM O PERFIL
+Ao consultar as férias, o servidor usa o e-mail do usuário da sessão.
+Para os cadastros anteriores que ainda não tinham e-mail, a correspondência é feita
+por nome completo normalizado (sem acentos, sem diferenças de maiúsculas ou o sufixo
+“| QCA”), somente quando esse nome é único nos dois cadastros. Não há aproximação
+por primeiro/último nome nem por prefixo do e-mail.
+Os nomes completos da planilha inicial correspondem aos usuários da base fornecida.
+Na administração das férias, o campo “E-mail do usuário vinculado” permite conferir
+ou ajustar o vínculo. Ao salvar, ele passa a ser persistido no cadastro das férias.
+O mesmo e-mail não pode ser vinculado a mais de um integrante.
+Se não houver correspondência ou se houver homônimos, o calendário comum continua
+funcionando; o usuário recebe no perfil a indicação de solicitar a conferência ao admin.
+O e-mail do vínculo é o e-mail cadastrado na Central, não uma senha ou credencial Microsoft.
+
+CONSULTA PESSOAL
+- Na tela de férias, “Minhas férias” mostra os próprios períodos.
+- “Ir para minhas férias” muda o mês e limpa filtros que poderiam ocultar a pessoa.
+- Os dias da própria pessoa recebem destaque roxo; o nome aparece com estrela.
+- No mapa, o período recebe contorno roxo e identificação “Você”.
+- Em “Meu perfil”, a seção “Minhas férias” mostra as datas e a quantidade de dias,
+  com botão para abrir o calendário da equipe.
+- O cadastro de férias pode ser atualizado somente pelo admin. O usuário consulta.
+- Indicadores, avisos de revisão e painel de coincidências seguem exclusivos do admin.
+- Nomes nas visualizações das férias continuam com primeiro e último nome.
+
+CENTRAL CJ — CALENDÁRIO DE FÉRIAS DA EQUIPE
+
+O QUE PUBLICAR NO GITHUB
+Extraia este ZIP. Na raiz do mesmo repositório usado pelo Render:
+1. Substitua index.html e server.py pelos arquivos deste pacote.
+2. Adicione vacations.py e vacations_seed.json na mesma pasta do server.py.
+3. Faça o commit dos quatro arquivos juntos e aguarde o deploy do Render.
+   Se o deploy automático estiver desligado, use Manual Deploy > Deploy latest commit.
+Não substitua outras pastas, arquivos de autenticação, robôs ou configurações.
+Não é necessário mudar variáveis de ambiente, banco Neon, requisitos ou comando de início.
+Faça uma cópia de segurança dos arquivos anteriores antes de substituir.
+
+COMO ACESSAR
+Na Central, clique em “Férias da equipe” no cabeçalho, ao lado dos resultados.
+A funcionalidade abre no mesmo estilo das ferramentas/resultados, com botão para expandir.
+Não é um card de iniciativa.
+O calendário começa em janeiro de 2027, o ano de planejamento da planilha recebida.
+Use mês/ano, setas ou Hoje para mudar o período.
+
+VISÃO DO TIME
+- Calendário mensal com cores por núcleo e nomes nos dias de férias.
+- Mapa da equipe para comparar os períodos lado a lado.
+- Busca por integrante e filtros por núcleo e subnúcleo.
+- Nomes exibidos com primeiro e último nome; o cadastro mantém o nome completo.
+- Clique em um dia ou integrante para abrir os detalhes e observações.
+- Traço contínuo: situação no DP “PROGRAMADAS”. Demais situações ficam tracejadas.
+- Coincidências são informações para planejamento; não bloqueiam cadastros.
+- Os dias exibidos incluem início e fim; não são cálculos trabalhistas ou de dias úteis.
+
+EDIÇÃO ADMINISTRATIVA
+Somente na visão administrativa aparecem os quatro indicadores do topo, os avisos
+de cadastros para revisão e o painel “Períodos que coincidem” (com seus filtros).
+As datas permanecem visíveis para a equipe no calendário e no mapa.
+Entre na visão administrativa pelo acesso existente da Central.
+Clique em “Gerenciar férias”, ou abra “Férias da equipe” enquanto estiver nessa visão.
+Use “Adicionar integrante” ou “Gerenciar cadastros”.
+É possível editar nome, núcleo, subnúcleo, validações, ID GLPI, observações e datas;
+adicionar/remover períodos; ou excluir um integrante, com confirmação.
+Ao salvar, a alteração vai ao banco compartilhado, sem baixar ou editar planilhas.
+O time recebe atualizações automaticamente durante a consulta (até 15 segundos,
+com a janela visível e sem um detalhe aberto), ou ao reabrir a funcionalidade.
+Se outro administrador salvar primeiro, a segunda edição será recusada para evitar
+sobrescrita. Anote sua alteração, feche o detalhe e reabra o calendário para carregar
+a versão atual antes de refazer a edição.
+O perfil com permissão administrativa ainda precisa da sessão/senha administrativa
+já usada pela Central; a visualização comum continua sem botões de edição.
+
+BASE INICIAL E PERSISTÊNCIA
+Os dados foram importados da planilha de planejamento 2027 enviada, preservando
+os períodos que começam em 2026 e terminam em 2028.
+O cadastro de Crislayne tem dois períodos iguais na origem; ambos foram preservados
+e sinalizados para revisão administrativa. Ela é contada uma única vez em cada dia.
+Thalyta foi mantida no cadastro, com indicação de que ainda não tem datas.
+As vendas de dias e outras observações foram preservadas em texto.
+A planilha original não foi alterada.
+A importação inicial só acontece quando a tabela vacations_state ainda não tem dados.
+Deploys posteriores não sobrescrevem as edições feitas pelo admin.
+Depois da primeira publicação, faça as mudanças pela administração do calendário;
+alterar vacations_seed.json não substitui o conteúdo já salvo no banco.
+Se o banco/API não estiver disponível, a tela avisa que mostra apenas a referência
+inicial da planilha e desabilita a edição. Abra pela Central hospedada para salvar.
+Os campos do calendário são próprios: editar férias não altera o cadastro de login.
+
+VERIFICAÇÃO APÓS PUBLICAR
+- Atualize a página com Ctrl+F5 e abra “Férias da equipe”.
+- Confira a visão mensal e o mapa da equipe.
+- Entre como admin, faça uma pequena alteração de teste e salve.
+- Abra a mesma funcionalidade em outra sessão do time e confira a alteração.
+- Se surgir erro de módulo, confirme que os quatro arquivos foram enviados juntos
+  e estão na raiz correta, preservando os nomes e letras minúsculas.
+- Os arquivos do robô Lexio no computador não precisam de atualização para este recurso.
+
+VALIDAÇÃO DO PACOTE
+Verificado em navegador desktop e celular: abertura pelo cabeçalho, consulta comum
+sem edição, detalhes, filtros, mapa, anos, criação/edição/exclusão administrativa e
+conflito de edição. API verificada com banco SQLite temporário: permissões, sessão,
+CSRF/origem, persistência, revisão e datas inválidas. Não foi feito deploy nem teste
+no banco Neon de produção; a publicação e a conferência final são no seu ambiente.

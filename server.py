@@ -160,7 +160,7 @@ def application(environ,start_response):
                 return respond('401 Unauthorized',{'error':'Selecione seu perfil para acessar a Central.'})
         if path=='/api/vacations':
             import vacations
-            if method=='GET':return respond('200 OK',vacations.read(connect))
+            if method=='GET':return respond('200 OK',vacations.read(connect,sso_auth.current(environ,connect)))
             if method!='POST':return respond('405 Method Not Allowed')
             if not admin_access.allowed(sso_auth.current(environ,connect),connect):return respond('403 Forbidden',{'error':'Seu perfil não tem permissão administrativa.'})
             active=session(environ)
