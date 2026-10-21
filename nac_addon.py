@@ -38,7 +38,7 @@ def state(connect,identity,admin,month):
         totals=c.execute('SELECT email,COUNT(*),SUM(CASE WHEN closed=? THEN 1 ELSE 0 END),MAX(created) FROM nac_agreements WHERE '+where+' AND active=1 GROUP BY email',(today_value,*params)).fetchall()
         rows=c.execute('SELECT id,email,name,closed,reference,client,note,created,updated,active FROM nac_agreements WHERE '+where+('' if admin else ' AND active=1')+' ORDER BY closed DESC,created DESC,id DESC LIMIT 100',params).fetchall()
     records=[dict(zip(('id','email','name','date','reference','client','note','created','updated','active'),r)) for r in rows];counts={r[0]:r[1] for r in totals}
-    ranking=sorted([{**p,'count':counts.get(p['email'],0)} for p in people],key=lambda p:(-p['count'],norm(p['name'])))
+    ranking=sorted([{**p,'count':counts.get(p['email'],0),'todayCount':next((r[2] or 0 for r in totals if r[0]==p['email']),0)} for p in people],key=lambda p:(-p['count'],norm(p['name'])))
     last=None;position=0
     for i,row in enumerate(ranking):
         if row['count']!=last:position=i+1;last=row['count']
