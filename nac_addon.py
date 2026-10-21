@@ -20,30 +20,30 @@ def setup(connect):
         c.execute('INSERT INTO nac_meta VALUES (1,1) ON CONFLICT (id) DO NOTHING')
         c.execute('CREATE TABLE IF NOT EXISTS nac_agreements (id TEXT PRIMARY KEY,email TEXT NOT NULL,name TEXT NOT NULL,closed TEXT NOT NULL,reference TEXT NOT NULL,client TEXT NOT NULL,note TEXT NOT NULL,created_by TEXT NOT NULL,created DOUBLE PRECISION NOT NULL,updated DOUBLE PRECISION NOT NULL,active INTEGER NOT NULL,request_key TEXT UNIQUE NOT NULL)')
         c.execute('CREATE TABLE IF NOT EXISTS nac_goals (month TEXT PRIMARY KEY,target INTEGER NOT NULL)')
-def lock(c):c.execute('LOCK TABLE nac_meta,nac_agreements,nac_goals IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
+        import nac_report
+        nac_report.setup(c)
+def lock(c):c.execute('LOCK TABLE nac_meta,nac_agreements,nac_goals,nac_details IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
 def roster(connect):
     with connect() as c:users=users_directory.list_users(c)
-    return [{'email':u['email'],'name':display(u['name'])} for u in users if u.get('active',True) and norm(u.get('subunit',''))=='nac' and u['email'].lower() not in EXCLUDED and not norm(u['name']).startswith(('lays giselle','leticia amelia'))]
+    from nac_report import EXTERNAL
+    return [{'email':u['email'],'name':display(u['name'])} for u in users if u.get('active',True) and norm(u.get('subunit',''))=='nac' and u['email'].lower() not in EXCLUDED and not norm(u['name']).startswith(('lays giselle','leticia amelia'))]+EXTERNAL
 def month_value(value):
     if not isinstance(value,str) or not re.fullmatch(r'20\d\d-(0[1-9]|1[0-2])',value):raise ValueError('Selecione um mês válido.')
     return value
 
 def state(connect,identity,admin,month):
-    month=month_value(month);people=roster(connect)
+    month=month_value(month);people=roster(connect);emails=[p['email'] for p in people];today_value=today();marks=','.join('?' for _ in emails);where='closed LIKE ? AND email IN ('+marks+')';params=(month+'-%',*emails)
     with connect() as c:
-        revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
-        goal=c.execute('SELECT target FROM nac_goals WHERE month=?',(month,)).fetchone()
-        rows=c.execute('SELECT id,email,name,closed,reference,client,note,created,updated,active FROM nac_agreements WHERE closed LIKE ? ORDER BY created DESC,id DESC',(month+'-%',)).fetchall()
-    records=[dict(zip(('id','email','name','date','reference','client','note','created','updated','active'),r)) for r in rows]
-    active=[r for r in records if r['active']];counts={p['email']:0 for p in people};names={p['email']:p['name'] for p in people}
-    for r in active:counts[r['email']]=counts.get(r['email'],0)+1;names.setdefault(r['email'],display(r['name']))
-    ranking=sorted([{'email':email,'name':names[email],'count':count} for email,count in counts.items()],key=lambda x:(-x['count'],norm(x['name'])))
-    # Ranking uses competition positions: ties share a rank.
-    position=0;last=None
+        revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0];goal=c.execute('SELECT target FROM nac_goals WHERE month=?',(month,)).fetchone()
+        totals=c.execute('SELECT email,COUNT(*),SUM(CASE WHEN closed=? THEN 1 ELSE 0 END),MAX(created) FROM nac_agreements WHERE '+where+' AND active=1 GROUP BY email',(today_value,*params)).fetchall()
+        rows=c.execute('SELECT id,email,name,closed,reference,client,note,created,updated,active FROM nac_agreements WHERE '+where+('' if admin else ' AND active=1')+' ORDER BY closed DESC,created DESC,id DESC LIMIT 100',params).fetchall()
+    records=[dict(zip(('id','email','name','date','reference','client','note','created','updated','active'),r)) for r in rows];counts={r[0]:r[1] for r in totals}
+    ranking=sorted([{**p,'count':counts.get(p['email'],0)} for p in people],key=lambda p:(-p['count'],norm(p['name'])))
+    last=None;position=0
     for i,row in enumerate(ranking):
         if row['count']!=last:position=i+1;last=row['count']
         row['rank']=position
-    return {'revision':revision,'month':month,'today':today(),'serverTime':time.time(),'goal':goal[0] if goal else 0,'total':len(active),'todayCount':sum(r['date']==today() for r in active),'ranking':ranking,'roster':people,'records':(records if admin else active)[:100],'canAdmin':admin,'canRegister':admin or any(p['email']==identity['email'] for p in people),'user':{'email':identity['email'],'name':display(identity['name'])},'latest':max((r['created'] for r in active),default=0)}
+    return {'revision':revision,'month':month,'today':today_value,'serverTime':time.time(),'dateBasis':'Data Preenchimento','goal':goal[0] if goal else 0,'total':sum(r[1] for r in totals),'todayCount':sum(r[2] or 0 for r in totals),'ranking':ranking,'roster':people,'records':records,'canAdmin':admin,'canRegister':admin or identity['email'] in emails,'user':{'email':identity['email'],'name':display(identity['name'])},'latest':max((r[3] for r in totals),default=0)}
 
 def text_field(data,key,limit):
     value=data.get(key,'')
@@ -105,10 +105,19 @@ def application(env,start,server):
         if path=='/api/nac/template':
             if method!='GET':return reply(405)
             return reply(200,body=(ROOT/'nac'/'Modelo_Importacao_Acordos.xlsx').read_bytes(),mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',extra=[('Content-Disposition','attachment; filename=Modelo_Importacao_Acordos.xlsx')])
+        if path=='/api/nac/dashboard':
+            if method!='GET':return reply(405)
+            import nac_report
+            q=parse_qs(env.get('QUERY_STRING',''))
+            return reply(200,nac_report.dashboard(server.connect,q.get('month',[today()[:7]])[0],q.get('participant',[''])[0],q.get('client',[''])[0]))
         if path=='/api/nac/state':
             if method!='GET':return reply(405)
             month=parse_qs(env.get('QUERY_STRING','')).get('month',[today()[:7]])[0]
-            return reply(200,state(server.connect,identity,admin,month))
+            q=parse_qs(env.get('QUERY_STRING',''))
+            if q.get('since'):
+                with server.connect() as c:revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
+                if q['since']==[str(revision)]:return reply(200,{'unchanged':True,'revision':revision,'canAdmin':admin})
+            out=state(server.connect,identity,admin,month);out['csrf']=identity.get('csrf','');out['adminCsrf']=admin_session[1] if admin_session else '';return reply(200,out)
         if method!='POST':return reply(405)
         supplied=env.get('HTTP_X_CSRF_TOKEN','')
         valid=bool(identity.get('csrf')) and hmac.compare_digest(supplied,identity['csrf'])
@@ -145,7 +154,7 @@ def decode_file(data):
     if not raw or len(raw)>5*1024*1024:raise ValueError('O arquivo deve ter até 5 MB.')
     return name,raw
 
-def sheet_rows(name,raw):
+def sheet_rows(name,raw,sheet_name=None):
     import csv,io,zipfile,posixpath
     from xml.etree import ElementTree as ET
     from datetime import timedelta
@@ -169,7 +178,7 @@ def sheet_rows(name,raw):
                 return ET.fromstring(source)
             ns={'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
             wb=xml('xl/workbook.xml',1_000_000);props=wb.find('m:workbookPr',ns);epoch=date(1904,1,1) if props is not None and props.get('date1904') in ('1','true') else date(1899,12,30)
-            sheet=wb.find('m:sheets/m:sheet',ns)
+            sheet=next((x for x in wb.findall('m:sheets/m:sheet',ns) if norm(x.get('name',''))==norm(sheet_name)),None) if sheet_name else wb.find('m:sheets/m:sheet',ns)
             if sheet is None:raise ValueError('A primeira aba não foi encontrada.')
             rid=sheet.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
             rels=xml('xl/_rels/workbook.xml.rels',1_000_000);target=next((r.get('Target') for r in rels if r.get('Id')==rid and r.get('TargetMode')!='External'),None)
@@ -200,7 +209,7 @@ def sheet_rows(name,raw):
                 if len(rows)>2001:raise ValueError('Importe até 2.000 acordos por arquivo.')
             # Date conversion is restricted to the mapped date column, not IDs.
             if rows:
-                aliases={'data','data de fechamento','data fechamento','fechamento','data do acordo','data acordo'}
+                aliases={'data','data de fechamento','data fechamento','fechamento','data do acordo','data acordo','data preenchimento','data acordo realizado','data audiencia'}
                 for col,value in enumerate(rows[0]):
                     if norm(value) in aliases:
                         for row in rows[1:]:
@@ -221,6 +230,8 @@ def import_plan(connect,identity,admin,rows,c):
     for u in users:
         if u['email'] in people:
             for label in (u['name'].split('|')[0],display(u['name'])):name_map.setdefault(norm(label),set()).add(u['email'])
+    for p in people.values():name_map.setdefault(norm(p['name']),set()).add(p['email'])
+    name_map.update({'arruda adv':{'external:arruda'},'acordo - igor ribeiro pereira':{'external:igor'},'igor ribeiro pereira':{'external:igor'}})
     existing={norm(r[0]) for r in c.execute('SELECT reference FROM nac_agreements WHERE active=1 AND reference<>?',('',)).fetchall()};seen=set();valid=[];errors=[];duplicates=[]
     for number,row in enumerate(rows[1:],2):
         if not any(str(v).strip() for v in row):continue
@@ -252,10 +263,19 @@ def import_plan(connect,identity,admin,rows,c):
 
 def import_agreements(connect,identity,admin,data):
     import hashlib
-    name,raw=decode_file(data);rows=sheet_rows(name,raw);action=data.get('action','preview')
+    name,raw=decode_file(data)
+    try:rows=sheet_rows(name,raw,sheet_name='Geral') if name.lower().endswith('.xlsx') else sheet_rows(name,raw)
+    except ValueError as e:
+        if 'primeira aba' not in str(e):raise
+        rows=sheet_rows(name,raw)
+    action=data.get('action','preview')
     if action not in ('preview','commit'):raise ValueError('Ação inválida.')
     with connect() as c:
         if action=='commit':lock(c)
+        import nac_report
+        if nac_report.is_report(rows):
+            plan=nac_report.plan(connect,identity,admin,rows,c)
+            return (200,plan) if action=='preview' else nac_report.commit(c,identity,plan)
         plan=import_plan(connect,identity,admin,rows,c)
         if action=='preview':return 200,plan
         if plan['errors']:return 400,{'error':'Corrija as linhas inválidas antes de importar. Nenhum registro foi salvo.',**plan}
