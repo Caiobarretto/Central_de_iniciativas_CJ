@@ -1,0 +1,619 @@
+{
+  "planningYear": 2027,
+  "source": "FÉRIAS CONTROLADORIA JURÍDICA_2027 - NOVO (2).xlsx",
+  "employees": [
+    {
+      "id": "ferias-2",
+      "name": "RAFAELA PEREIRA DA SILVA",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "CORRESPONDENTES",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "478657",
+      "dpValidation": "PROGRAMADAS",
+      "periods": [
+        {
+          "id": "ferias-2-p1",
+          "start": "2026-12-14",
+          "end": "2026-12-23",
+          "declaredDays": 10
+        },
+        {
+          "id": "ferias-2-p2",
+          "start": "2027-01-12",
+          "end": "2027-01-31",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 2
+    },
+    {
+      "id": "ferias-3",
+      "name": "ESTER BEATRIZ SILVA DE OLIVEIRA",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "PAUTA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "479801",
+      "dpValidation": "PROGRAMADAS",
+      "periods": [
+        {
+          "id": "ferias-3-p1",
+          "start": "2026-12-14",
+          "end": "2027-01-02",
+          "declaredDays": 20
+        },
+        {
+          "id": "ferias-3-p2",
+          "start": "2027-02-10",
+          "end": "2027-02-19",
+          "declaredDays": 10
+        }
+      ],
+      "sourceRow": 3
+    },
+    {
+      "id": "ferias-4",
+      "name": "JESSICA GOMES DE MELO",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "CORRESPONDENTES",
+      "notes": "VENDA DE 10 DIAS",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "467461",
+      "dpValidation": "PROGRAMADAS",
+      "periods": [
+        {
+          "id": "ferias-4-p1",
+          "start": "2026-12-28",
+          "end": "2027-01-16",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 4
+    },
+    {
+      "id": "ferias-5",
+      "name": "DANIELLE DA SILVA RODRIGUES",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "LIDERANÇA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480266",
+      "dpValidation": "PROGRAMADAS",
+      "periods": [
+        {
+          "id": "ferias-5-p1",
+          "start": "2026-12-28",
+          "end": "2027-01-06",
+          "declaredDays": 10
+        },
+        {
+          "id": "ferias-5-p2",
+          "start": "2027-04-14",
+          "end": "2027-05-03",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 5
+    },
+    {
+      "id": "ferias-6",
+      "name": "LAIS SOUZA GOMES DA SILVA",
+      "nucleus": "COORDENAÇÃO",
+      "subnucleus": "LIDERANÇA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480236",
+      "dpValidation": "PROGRAMADAS",
+      "periods": [
+        {
+          "id": "ferias-6-p1",
+          "start": "2027-01-04",
+          "end": "2027-01-18",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-6-p2",
+          "start": "2027-06-07",
+          "end": "2027-06-21",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 6
+    },
+    {
+      "id": "ferias-7",
+      "name": "JEFERSON BIRLO DE ARAUJO",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "PUBLICAÇÕES",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480237",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-7-p1",
+          "start": "2027-01-04",
+          "end": "2027-01-23",
+          "declaredDays": 20
+        },
+        {
+          "id": "ferias-7-p2",
+          "start": "2027-06-28",
+          "end": "2027-07-07",
+          "declaredDays": 10
+        }
+      ],
+      "sourceRow": 7
+    },
+    {
+      "id": "ferias-8",
+      "name": "DAPHINNY THAIANNY MOREIRA DA SILVA",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "CADASTRO",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480238",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-8-p1",
+          "start": "2027-01-07",
+          "end": "2027-01-21",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-8-p2",
+          "start": "2027-07-08",
+          "end": "2027-07-22",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 8
+    },
+    {
+      "id": "ferias-9",
+      "name": "INGRID VASTIL DE PAIVA",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "REVISÃO DE CADASTRO",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480239",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-9-p1",
+          "start": "2027-01-13",
+          "end": "2027-01-27",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-9-p2",
+          "start": "2027-09-20",
+          "end": "2027-10-04",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 9
+    },
+    {
+      "id": "ferias-10",
+      "name": "CRISLAYNE FARIAS VIEIRA",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "NAC",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480242",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-10-p1",
+          "start": "2027-02-15",
+          "end": "2027-03-01",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-10-p2",
+          "start": "2027-02-15",
+          "end": "2027-03-01",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 10
+    },
+    {
+      "id": "ferias-11",
+      "name": "CAIO COSTA BARRETTO",
+      "nucleus": "COORDENAÇÃO",
+      "subnucleus": "COORDENAÇÃO",
+      "notes": "VENDA DE 10 DIAS",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480244",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-11-p1",
+          "start": "2027-02-22",
+          "end": "2027-03-13",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 11
+    },
+    {
+      "id": "ferias-12",
+      "name": "INGRID FONSECA DOURADO",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "CORRESPONDENTES",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480245",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-12-p1",
+          "start": "2027-03-10",
+          "end": "2027-03-24",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-12-p2",
+          "start": "2027-09-15",
+          "end": "2027-09-29",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 12
+    },
+    {
+      "id": "ferias-13",
+      "name": "LETICIA AMELIA SANTOS DE SANTANA",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "NAC",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480246",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-13-p1",
+          "start": "2027-03-15",
+          "end": "2027-03-29",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-13-p2",
+          "start": "2027-10-13",
+          "end": "2027-10-27",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 13
+    },
+    {
+      "id": "ferias-14",
+      "name": "LAYLA MICHELE DA COSTA DE MENEZES",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "PUBLICAÇÕES",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480249",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-14-p1",
+          "start": "2027-04-01",
+          "end": "2027-04-20",
+          "declaredDays": 20
+        },
+        {
+          "id": "ferias-14-p2",
+          "start": "2027-06-02",
+          "end": "2027-06-11",
+          "declaredDays": 10
+        }
+      ],
+      "sourceRow": 14
+    },
+    {
+      "id": "ferias-15",
+      "name": "RAISSA RAMALHO SALES CORREIA",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "NAC",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480250",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-15-p1",
+          "start": "2027-04-15",
+          "end": "2027-04-29",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-15-p2",
+          "start": "2027-07-16",
+          "end": "2027-07-30",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 15
+    },
+    {
+      "id": "ferias-16",
+      "name": "CRISTHIANA FREIRE QUINTINO C DA SILVA",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "CERTIDÕES",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480251",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-16-p1",
+          "start": "2027-05-14",
+          "end": "2027-05-28",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-16-p2",
+          "start": "2027-09-01",
+          "end": "2027-09-15",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 16
+    },
+    {
+      "id": "ferias-17",
+      "name": "KARLLA MIRANDA MORAES",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "CERTIDÕES",
+      "notes": "VENDA DE 10 DIAS",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480252",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-17-p1",
+          "start": "2027-06-07",
+          "end": "2027-06-26",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 17
+    },
+    {
+      "id": "ferias-18",
+      "name": "AMANDA TAYANE SILVA GALDINO",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "NAC",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480253",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-18-p1",
+          "start": "2027-06-16",
+          "end": "2027-06-30",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-18-p2",
+          "start": "2027-11-03",
+          "end": "2027-11-17",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 18
+    },
+    {
+      "id": "ferias-19",
+      "name": "ALAN MARCIO DA SILVA MEDEIROS",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "REVISÃO DE CADASTRO",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480255",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-19-p1",
+          "start": "2027-06-30",
+          "end": "2027-07-14",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-19-p2",
+          "start": "2027-10-28",
+          "end": "2027-11-11",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 19
+    },
+    {
+      "id": "ferias-20",
+      "name": "JADIELLE RIBEIRO FERREIRA DA SILVA",
+      "nucleus": "OPERAÇÕES",
+      "subnucleus": "REVISÃO DE CADASTRO",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480256",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-20-p1",
+          "start": "2027-07-15",
+          "end": "2027-07-29",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-20-p2",
+          "start": "2027-10-13",
+          "end": "2027-10-27",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 20
+    },
+    {
+      "id": "ferias-21",
+      "name": "RAYANNE AURORA ALVES DA ROCHA OLIVEIRA",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "LIDERANÇA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480258",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-21-p1",
+          "start": "2027-07-19",
+          "end": "2027-08-02",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-21-p2",
+          "start": "2027-10-18",
+          "end": "2027-11-01",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 21
+    },
+    {
+      "id": "ferias-22",
+      "name": "LAYS GISELLE TEIXEIRA CAMPOS",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "LIDERANÇA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480259",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-22-p1",
+          "start": "2027-08-16",
+          "end": "2027-08-30",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-22-p2",
+          "start": "2027-11-16",
+          "end": "2027-11-30",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 22
+    },
+    {
+      "id": "ferias-23",
+      "name": "TAYNA LUIZE VIANA DOS SANTOS",
+      "nucleus": "ACORDOS E PUBLICAÇÕES",
+      "subnucleus": "NAC",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480260",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-23-p1",
+          "start": "2027-09-13",
+          "end": "2027-09-27",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-23-p2",
+          "start": "2028-01-17",
+          "end": "2028-01-31",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 23
+    },
+    {
+      "id": "ferias-24",
+      "name": "PEDRO CORREA FERREIRA",
+      "nucleus": "COORDENAÇÃO",
+      "subnucleus": "COORDENAÇÃO",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480262",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-24-p1",
+          "start": "2027-10-25",
+          "end": "2027-11-13",
+          "declaredDays": 20
+        },
+        {
+          "id": "ferias-24-p2",
+          "start": "2028-04-03",
+          "end": "2028-04-12",
+          "declaredDays": 10
+        }
+      ],
+      "sourceRow": 24
+    },
+    {
+      "id": "ferias-25",
+      "name": "STELA MARIANA TIAGO SANTOS",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "PAUTA",
+      "notes": "",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480263",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-25-p1",
+          "start": "2027-07-05",
+          "end": "2027-07-19",
+          "declaredDays": 15
+        },
+        {
+          "id": "ferias-25-p2",
+          "start": "2028-01-03",
+          "end": "2028-01-17",
+          "declaredDays": 15
+        }
+      ],
+      "sourceRow": 25
+    },
+    {
+      "id": "ferias-26",
+      "name": "WELLINGTON LEONARDO DA SILVA",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "PAUTA",
+      "notes": "VENDA DE 10 DIAS",
+      "leaderValidation": "VALIDADAS",
+      "glpiId": "480264",
+      "dpValidation": "AG. RESPOSTA",
+      "periods": [
+        {
+          "id": "ferias-26-p1",
+          "start": "2027-03-01",
+          "end": "2027-03-20",
+          "declaredDays": 20
+        }
+      ],
+      "sourceRow": 26
+    },
+    {
+      "id": "ferias-27",
+      "name": "THALYTA RODRIGUES DE FRAGA",
+      "nucleus": "GESTÃO DE CORRESPONDENTES",
+      "subnucleus": "CORRESPONDENTES",
+      "notes": "JOVEM APRENDIZ",
+      "leaderValidation": "",
+      "glpiId": "",
+      "dpValidation": "",
+      "periods": [],
+      "sourceRow": 27
+    }
+  ]
+}
