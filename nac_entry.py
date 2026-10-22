@@ -1,5 +1,7 @@
 """Entrada adicional da Central: Painel NAC e otimizações, sem substituir os arquivos do núcleo."""
 import gzip,time
+from pathlib import Path
+import nac_people
 import server
 import fast_db
 import nac_addon
@@ -17,16 +19,24 @@ def accepts_gzip(value):
         if quality>0:return True
     return False
 
+PEOPLE_ROUTES={'/api/nac/people','/api/nac/photo','/api/nac/celebration'}
+
 def application(env,start_response):
     scope,token=fast_db.begin(server,env.get('REQUEST_METHOD','GET'));started=time.perf_counter();captured={}
     def capture(status,headers,exc_info=None):captured.update(status=status,headers=headers)
     try:
-        path=env.get('PATH_INFO','');response=(nac_addon.application(env,capture,server) if path in ROUTES else server.application(env,capture))
+        path=env.get('PATH_INFO','');response=(nac_people.handle(env,capture,server) if path in PEOPLE_ROUTES else nac_addon.application(env,capture,server) if path in ROUTES else server.application(env,capture))
         try:body=b''.join(response)
         finally:
             if hasattr(response,'close'):response.close()
         headers=captured['headers'];is_html=any(k.lower()=='content-type' and 'text/html' in v for k,v in headers)
         if path=='/central' and captured['status'].startswith('200 ') and is_html:body=body.replace(b'</body>',NAV+b'</body>',1)
+        if path in ('/central','/nac','/nac/') and captured['status'].startswith('200 ') and is_html:
+            assets=Path(__file__).parent/'nac'
+            scripts=(('<script>'+ (assets/'people_admin.js').read_text()+'</script>') if path=='/central' else '')+'<script>'+(assets/'celebration.js').read_text()+'</script>'
+            body=body.replace(b'</body>',scripts.encode()+b'</body>',1)
+        if env.get('REQUEST_METHOD')=='POST' and path in ('/auth/profile/photo','/api/admin/users') and captured['status'].startswith('200 '):
+            with server.connect() as c:nac_people.bump(c)
         if path=='/carregando' and captured['status'].startswith('200 ') and is_html:
             body=body.replace(b'(now-start)/100',b'(now-start)/8').replace(b'now-start>=10000',b'now-start>=800')
         # Compression is optional and negotiated. JSON containing profile/session data remains uncompressed.

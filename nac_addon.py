@@ -22,22 +22,30 @@ def setup(connect):
         c.execute('CREATE TABLE IF NOT EXISTS nac_goals (month TEXT PRIMARY KEY,target INTEGER NOT NULL)')
         import nac_report
         nac_report.setup(c)
+    import nac_people
+    nac_people.setup(connect)
 def lock(c):c.execute('LOCK TABLE nac_meta,nac_agreements,nac_goals,nac_details IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
-def roster(connect):
-    with connect() as c:users=users_directory.list_users(c)
-    from nac_report import EXTERNAL
-    return [{'email':u['email'],'name':display(u['name'])} for u in users if u.get('active',True) and norm(u.get('subunit',''))=='nac' and u['email'].lower() not in EXCLUDED and not norm(u['name']).startswith(('lays giselle','leticia amelia'))]+EXTERNAL
+def roster(connect,include_inactive=False):
+    import nac_people
+    with connect() as c:
+        users=users_directory.list_users(c);externals=nac_people.external(c)
+        people=[{'email':u['email'],'name':display(u['name'])} for u in users if (include_inactive or u.get('active',True)) and norm(u.get('subunit',''))=='nac' and u['email'].lower() not in EXCLUDED and not norm(u['name']).startswith(('lays giselle','leticia amelia'))]
+        people += [{'email':u['key'],'name':display(u['name']),'external':True,'contactEmail':u['email']} for u in externals if include_inactive or u['active']]
+        urls=nac_people.photos(c,[p['email'] for p in people])
+    return [{**p,'photoUrl':urls.get(p['email'],'')} for p in people]
 def month_value(value):
     if not isinstance(value,str) or not re.fullmatch(r'20\d\d-(0[1-9]|1[0-2])',value):raise ValueError('Selecione um mês válido.')
     return value
 
 def state(connect,identity,admin,month):
-    month=month_value(month);people=roster(connect);emails=[p['email'] for p in people];today_value=today();marks=','.join('?' for _ in emails);where='closed LIKE ? AND email IN ('+marks+')';params=(month+'-%',*emails)
+    month=month_value(month);people=roster(connect);emails=[p['email'] for p in people];today_value=today();marks=','.join('?' for _ in emails) or 'NULL';where='closed LIKE ? AND email IN ('+marks+')';params=(month+'-%',*emails)
     with connect() as c:
         revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0];goal=c.execute('SELECT target FROM nac_goals WHERE month=?',(month,)).fetchone()
         totals=c.execute('SELECT email,COUNT(*),SUM(CASE WHEN closed=? THEN 1 ELSE 0 END),MAX(created) FROM nac_agreements WHERE '+where+' AND active=1 GROUP BY email',(today_value,*params)).fetchall()
         rows=c.execute('SELECT id,email,name,closed,reference,client,note,created,updated,active FROM nac_agreements WHERE '+where+('' if admin else ' AND active=1')+' ORDER BY closed DESC,created DESC,id DESC LIMIT 100',params).fetchall()
     records=[dict(zip(('id','email','name','date','reference','client','note','created','updated','active'),r)) for r in rows];counts={r[0]:r[1] for r in totals}
+    names={p['email']:p['name'] for p in people}
+    for record in records:record['name']=names.get(record['email'],record['name'])
     ranking=sorted([{**p,'count':counts.get(p['email'],0),'todayCount':next((r[2] or 0 for r in totals if r[0]==p['email']),0)} for p in people],key=lambda p:(-p['count'],norm(p['name'])))
     last=None;position=0
     for i,row in enumerate(ranking):
@@ -231,7 +239,7 @@ def import_plan(connect,identity,admin,rows,c):
         if u['email'] in people:
             for label in (u['name'].split('|')[0],display(u['name'])):name_map.setdefault(norm(label),set()).add(u['email'])
     for p in people.values():name_map.setdefault(norm(p['name']),set()).add(p['email'])
-    name_map.update({'arruda adv':{'external:arruda'},'acordo - igor ribeiro pereira':{'external:igor'},'igor ribeiro pereira':{'external:igor'}})
+    name_map.update({'arruda adv':{'external:arruda'},'acordo - igor ribeiro pereira':{'external:igor'},'igor ribeiro pereira':{'external:igor'},'igor pereira':{'external:igor'},'arruda':{'external:arruda'}})
     existing={norm(r[0]) for r in c.execute('SELECT reference FROM nac_agreements WHERE active=1 AND reference<>?',('',)).fetchall()};seen=set();valid=[];errors=[];duplicates=[]
     for number,row in enumerate(rows[1:],2):
         if not any(str(v).strip() for v in row):continue

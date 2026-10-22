@@ -37,7 +37,7 @@ def plan(connect,identity,admin,rows,c):
     with connect() as con:
         for u in list_users(con):
             if u['email'] in people:mapping[norm(u['name'].split('|')[0])]=u['email']
-    mapping.update({'arruda adv':'external:arruda','arruda':'external:arruda','igor':'external:igor','acordo - igor ribeiro pereira':'external:igor','igor ribeiro pereira':'external:igor'})
+    mapping.update({'arruda adv':'external:arruda','arruda':'external:arruda','igor':'external:igor','acordo - igor ribeiro pereira':'external:igor','igor ribeiro pereira':'external:igor','igor pereira':'external:igor'})
     header={norm(v):i for i,v in enumerate(rows[0])}
     existing={norm(r[1]):r for r in c.execute('SELECT id,reference,email,closed,client,note,active FROM nac_agreements').fetchall() if r[1]}
     detail={r[0]:r[1] for r in c.execute('SELECT agreement_id,data FROM nac_details').fetchall()}
@@ -92,14 +92,14 @@ def commit(c,identity,plan):
 
 def dashboard(connect,month,participant='',client=''):
     from nac_addon import month_value
-    month=month_value(month);allowed={p['email'] for p in roster(connect)}
+    month=month_value(month);allowed={p['email']:p['name'] for p in roster(connect)}
     with connect() as c:
         rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.active=1 AND a.closed LIKE ? ORDER BY a.closed DESC,a.id',(month+'-%',)).fetchall()
     records=[]
     for r in rows:
         if r[1] not in allowed:continue
         extra=json.loads(r[6]) if r[6] else {}
-        records.append({'id':r[0],'email':r[1],'name':r[2],'date':r[3],'reference':r[4],'client':r[5],**extra})
+        records.append({'id':r[0],'email':r[1],'name':allowed[r[1]],'date':r[3],'reference':r[4],'client':r[5],**extra})
     clients=sorted({r['client'] for r in records if r.get('client')})
     records=[r for r in records if (not participant or r['email']==participant) and (not client or r['client']==client)]
     values=[r['amountCents'] for r in records if r.get('amountCents') is not None];total=sum(values)
