@@ -39,6 +39,7 @@ def application(env,start_response):
         finally:
             if hasattr(response,'close'):response.close()
         if path=='/central' and captured['status'].startswith('200 '):body=central_experience.prepare(body)
+        if path in ('/nac','/nac/','/resultados-cj') and captured['status'].startswith('200 '):body=body.replace(b'</head>',('<script>'+(Path(__file__).parent/'cj'/'loading.js').read_text()+'</script></head>').encode(),1)
         headers=captured['headers'];is_html=any(k.lower()=='content-type' and 'text/html' in v for k,v in headers)
         if path=='/central' and captured['status'].startswith('200 ') and is_html:body=body.replace(b'</body>',NAV+b'</body>',1)
         if path in ('/central','/nac','/nac/') and captured['status'].startswith('200 ') and is_html:
