@@ -1,0 +1,60 @@
+{
+  "imageHash": "a9a5f060d6b1509988444bfb606ec26b010b6e8a7cec21d6dcb31d2fc2574347",
+  "metrics": [
+    {
+      "label": "Horas de treinamento",
+      "value": 252,
+      "unit": "h",
+      "scope": "Mensal"
+    },
+    {
+      "label": "Horas por integrante",
+      "value": 10.08,
+      "unit": "h",
+      "scope": "Mensal"
+    },
+    {
+      "label": "Quantidade de treinamentos",
+      "value": 78,
+      "unit": "",
+      "scope": "Mensal"
+    },
+    {
+      "label": "Saldo de horas",
+      "value": 132,
+      "unit": "h",
+      "scope": "Mensal"
+    }
+  ],
+  "charts": [
+    {
+      "title": "Horas realizadas por núcleo",
+      "scope": "Mensal",
+      "series": [
+        {
+          "name": "Horas realizadas",
+          "unit": "h",
+          "rows": [
+            {
+              "label": "Gestão de Correspondentes",
+              "value": 170
+            },
+            {
+              "label": "Operações",
+              "value": 48
+            },
+            {
+              "label": "Coordenação",
+              "value": 23
+            },
+            {
+              "label": "Acordos e Publicações",
+              "value": 11
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "note": "Totais e distribuição por núcleo do mês. O detalhamento por integrante e os valores por tipo não estão disponíveis completos na imagem de origem."
+}
