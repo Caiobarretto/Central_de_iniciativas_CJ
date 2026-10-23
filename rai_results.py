@@ -46,9 +46,21 @@ def validate(rows):
 
 def setup(connect):
     seed=json.loads((ROOT/'cj'/'rai_seed.json').read_text());rows=validate(seed['rows'])
+    data=json.dumps({'rows':rows,'leaders':seed['leaders'],'source':seed['source']},ensure_ascii=False)
     with connect() as c:
         c.execute('CREATE TABLE IF NOT EXISTS cj_rai (id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,data TEXT NOT NULL,updated DOUBLE PRECISION NOT NULL)')
-        c.execute('INSERT INTO cj_rai VALUES (1,1,?,?) ON CONFLICT (id) DO NOTHING',(json.dumps({'rows':rows,'leaders':seed['leaders'],'source':seed['source']},ensure_ascii=False),time.time()))
+        c.execute('CREATE TABLE IF NOT EXISTS cj_rai_updates (id TEXT PRIMARY KEY,applied DOUBLE PRECISION NOT NULL)')
+        c.execute('CREATE TABLE IF NOT EXISTS cj_rai_backups (id TEXT PRIMARY KEY,revision INTEGER NOT NULL,data TEXT NOT NULL,updated DOUBLE PRECISION NOT NULL)')
+        c.execute('LOCK TABLE cj_rai,cj_rai_updates,cj_rai_backups IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
+        c.execute('INSERT INTO cj_rai VALUES (1,1,?,?) ON CONFLICT (id) DO NOTHING',(data,time.time()))
+        update=seed.get('updateId')
+        if update:
+            if not c.execute('SELECT id FROM cj_rai_updates WHERE id=?',(update,)).fetchone():
+                revision,previous,updated=c.execute('SELECT revision,data,updated FROM cj_rai WHERE id=1').fetchone()
+                if previous!=data:
+                    c.execute('INSERT INTO cj_rai_backups VALUES (?,?,?,?) ON CONFLICT (id) DO NOTHING',(update,revision,previous,updated))
+                    c.execute('UPDATE cj_rai SET revision=?,data=?,updated=? WHERE id=1',(revision+1,data,time.time()))
+                c.execute('INSERT INTO cj_rai_updates VALUES (?,?)',(update,time.time()))
 
 def routine_months(text):
     n=norm(text);mapa={1:('JAN','JANEIRO'),2:('FEV','FEVEREIRO'),3:('MAR','MARCO'),4:('ABR','ABRIL'),5:('MAI','MAIO'),6:('JUN','JUNHO'),7:('JUL','JULHO'),8:('AGO','AGOSTO'),9:('SET','SETEMBRO'),10:('OUT','OUTUBRO'),11:('NOV','NOVEMBRO'),12:('DEZ','DEZEMBRO')}
@@ -67,6 +79,7 @@ def applicable(r):
 
 def status(r):
     if r.get('cancelada'):return 'cancelada'
+    if any(isinstance(r.get(k),str) and r[k].startswith('#') for k in ('meta','real','cumprimento')):return 'erro-origem'
     achievement=r.get('cumprimento')
     if numeric(achievement):return 'batida' if achievement>=1 else 'gatilho' if achievement>=.5 else 'nao-batida'
     if not numeric(r.get('real')):return 'sem-mensuracao'
