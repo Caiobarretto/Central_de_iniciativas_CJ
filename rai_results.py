@@ -93,11 +93,47 @@ def calculate(r):
     if norm(r.get('gatilho'))=='SIM' and (real<=meta*1.1 if inverse else real>=meta*.9):return .5
     return 0
 
+def visible_rows(connect,identity,data):
+    import users_directory,admin_access
+    import module_permissions
+    if module_permissions.has(identity,connect,'rai'):return data['rows'],'admin'
+    email=str(identity.get('email','')).lower()
+    with connect() as c:
+        directory=users_directory.list_users(c)
+    viewer=next((u for u in directory if u['email']==email and u.get('active',True)),None)
+    if not viewer:return [],'individual'
+    names={}
+    for u in directory:names.setdefault(norm(u['name']),set()).add(u['email'])
+    def resolve(label):
+        label=norm(label)
+        if not label:return None
+        if label.lower() in {u['email'] for u in directory}:return label.lower()
+        if label in names:return next(iter(names[label])) if len(names[label])==1 else None
+        tokens=label.split()
+        if len(tokens)<2:return None
+        matches=[]
+        for name,addresses in names.items():
+            remaining=iter(name.split())
+            if all(any(word==token for word in remaining) for token in tokens):matches.extend(addresses)
+        return matches[0] if len(set(matches))==1 else None
+    allowed=[];team=False
+    for row in data['rows']:
+        owner=resolve(row['responsavel'])
+        profile=next((u for u in directory if u['email']==owner),None)
+        # Current directory leadership takes precedence; source mapping covers historical people.
+        leader=profile.get('leader','') if profile else ''
+        if not leader:leader=data.get('leaders',{}).get(norm(row['responsavel']),'')
+        own=owner==email
+        report=resolve(leader)==email
+        if own or report:allowed.append(row)
+        if report and not own:team=True
+    return allowed,'leadership' if team else 'individual'
+
 def get(connect,identity,admin=False,csrf=''):
     with connect() as c:revision,raw,updated=c.execute('SELECT revision,data,updated FROM cj_rai WHERE id=1').fetchone()
-    data=json.loads(raw);rows=data['rows'];years=sorted({r['ano'] for r in rows},reverse=True)
+    data=json.loads(raw);rows,scope=visible_rows(connect,identity,data);years=sorted({r['ano'] for r in rows},reverse=True)
     enriched=[{**r,'id':identifier(r),'displayName':short(r['responsavel']),'status':status(r),'applicableRoutines':applicable(r),'leader':data.get('leaders',{}).get(norm(r['responsavel']),''),'percentLike':numeric(r.get('meta')) and abs(r['meta'])<=1.5 and (not numeric(r.get('real')) or abs(r['real'])<=1.5)} for r in rows]
-    return {'rows':enriched,'years':years,'revision':revision,'updated':updated,'source':data.get('source',''),'canAdmin':admin,'csrf':csrf if admin else '','user':{'name':identity.get('name',''),'email':identity.get('email','')}}
+    return {'rows':enriched,'years':years,'revision':revision,'updated':updated,'source':data.get('source',''),'scope':scope,'canAdmin':admin,'csrf':csrf if admin else '','user':{'name':identity.get('name',''),'email':identity.get('email','')}}
 
 def mutate(connect,payload):
     action=payload.get('action')
