@@ -5,6 +5,7 @@ import nac_people
 import cj_results
 import rai_results
 import server
+import central_experience
 import module_permissions
 import fast_db
 import nac_addon
@@ -33,10 +34,11 @@ def application(env,start_response):
     scope,token=fast_db.begin(server,env.get('REQUEST_METHOD','GET'));started=time.perf_counter();captured={}
     def capture(status,headers,exc_info=None):captured.update(status=status,headers=headers)
     try:
-        path=env.get('PATH_INFO','');blocked=module_permissions.guard(env,capture,server,original_admin_session);response=blocked if blocked is not None else (rai_results.handle(env,capture,server) if path=='/api/cj/rai' else cj_results.handle(env,capture,server) if path in CJ_ROUTES else nac_people.handle(env,capture,server) if path in PEOPLE_ROUTES else nac_addon.application(env,capture,server) if path in ROUTES else server.application(env,capture))
+        path=env.get('PATH_INFO','');blocked=module_permissions.guard(env,capture,server,original_admin_session);response=blocked if blocked is not None else (rai_results.handle(env,capture,server) if path=='/api/cj/rai' or path.startswith('/api/cj/rai/') else cj_results.handle(env,capture,server) if path in CJ_ROUTES else nac_people.handle(env,capture,server) if path in PEOPLE_ROUTES else nac_addon.application(env,capture,server) if path in ROUTES else server.application(env,capture))
         try:body=b''.join(response)
         finally:
             if hasattr(response,'close'):response.close()
+        if path=='/central' and captured['status'].startswith('200 '):body=central_experience.prepare(body)
         headers=captured['headers'];is_html=any(k.lower()=='content-type' and 'text/html' in v for k,v in headers)
         if path=='/central' and captured['status'].startswith('200 ') and is_html:body=body.replace(b'</body>',NAV+b'</body>',1)
         if path in ('/central','/nac','/nac/') and captured['status'].startswith('200 ') and is_html:
@@ -45,7 +47,7 @@ def application(env,start_response):
             body=body.replace(b'</body>',scripts.encode()+b'</body>',1)
         if captured['status'].startswith('200 ') and is_html:
             assets=Path(__file__).parent/'cj'
-            names=['central_results.js','permissions.js'] if path=='/central' else ['figures.js','more_charts.js','results.js','rai.js'] if path=='/resultados-cj' else ['figures.js','login_motion.js'] if path in ('/','/index.html') else []
+            names=['central_results.js','permissions.js','profile_experience.js'] if path=='/central' else ['figures.js','more_charts.js','results.js','rai.js'] if path=='/resultados-cj' else ['figures.js','login_motion.js'] if path in ('/','/index.html') else []
             if names:body=body.replace(b'</body>',(''.join('<script>'+ (assets/name).read_text()+'</script>' for name in names)).encode()+b'</body>',1)
         if env.get('REQUEST_METHOD')=='POST' and path in ('/auth/profile/photo','/api/admin/users') and captured['status'].startswith('200 '):
             with server.connect() as c:nac_people.bump(c)

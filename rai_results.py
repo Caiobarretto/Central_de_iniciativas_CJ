@@ -1,7 +1,7 @@
 """RAI compartilhada: importa dados do HTML sem executar código e preserva todas as competências."""
 import json,re,math,time,hmac,hashlib,unicodedata
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs,quote
 ROOT=Path(__file__).resolve().parent
 TEXTS=('centro','objetivo','indicador','descritivo','mensuracao','tipoMeta','responsavel','nucleo','tipo','gatilho')
 
@@ -129,10 +129,37 @@ def visible_rows(connect,identity,data):
         if report and not own:team=True
     return allowed,'leadership' if team else 'individual'
 
+def photo_urls(connect,rows):
+    import users_directory
+    with connect() as c:
+        directory=users_directory.list_users(c)
+        names={norm(u['name']):u['email'] for u in directory}
+        keys=sorted({names.get(norm(r['responsavel'])) for r in rows}-{None})
+        photos=dict(c.execute('SELECT email,data FROM profile_photos WHERE email IN ('+','.join('?' for _ in keys)+')',tuple(keys)).fetchall()) if keys else {}
+    out={}
+    for row in rows:
+        name=row['responsavel'];photo=photos.get(names.get(norm(name)))
+        if photo:out[name]='/api/cj/rai/photo?person='+quote(name,safe='')+'&v='+hashlib.sha256(photo.encode()).hexdigest()[:20]
+    return out
+
+def profile_summary(connect,identity):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    with connect() as c:data=json.loads(c.execute('SELECT data FROM cj_rai WHERE id=1').fetchone()[0])
+    name=norm(identity.get('name',''));now=datetime.now(ZoneInfo('America/Sao_Paulo'));current=now.year*12+now.month
+    own=[{**r,'status':status(r)} for r in data['rows'] if norm(r['responsavel'])==name and not r['cancelada'] and r['ano']*12+r['mes']<=current]
+    measured=[r for r in own if numeric(r.get('real')) and r['status']!='erro-origem']
+    if not measured:return {'available':False,'message':'Ainda não há resultados RAI mensurados para o seu perfil.'}
+    year,month=max((r['ano'],r['mes']) for r in measured)
+    rows=[r for r in own if r['ano']==year and r['mes']==month];valid=[r for r in rows if numeric(r.get('real')) and r['status']!='erro-origem']
+    grd=[r['real'] for r in valid if r['tipo']=='GRD'];goals=[r for r in rows if r['tipo']!='GRD' and r['status'] in ('batida','gatilho','nao-batida')]
+    return {'available':True,'year':year,'month':month,'grd':sum(grd)/len(grd) if grd else None,'measured':len(valid),'total':len(rows),'goalsMet':sum(r['status'] in ('batida','gatilho') for r in goals),'goalsMeasured':len(goals),'url':'/resultados-cj?module=rai&person='+quote(rows[0]['responsavel'],safe='')+'&month='+str(year)+'-'+str(month).zfill(2)}
+
 def get(connect,identity,admin=False,csrf=''):
     with connect() as c:revision,raw,updated=c.execute('SELECT revision,data,updated FROM cj_rai WHERE id=1').fetchone()
     data=json.loads(raw);rows,scope=visible_rows(connect,identity,data);years=sorted({r['ano'] for r in rows},reverse=True)
-    enriched=[{**r,'id':identifier(r),'displayName':short(r['responsavel']),'status':status(r),'applicableRoutines':applicable(r),'leader':data.get('leaders',{}).get(norm(r['responsavel']),''),'percentLike':numeric(r.get('meta')) and abs(r['meta'])<=1.5 and (not numeric(r.get('real')) or abs(r['real'])<=1.5)} for r in rows]
+    urls=photo_urls(connect,rows)
+    enriched=[{**r,'photoUrl':urls.get(r['responsavel'],''),'id':identifier(r),'displayName':short(r['responsavel']),'status':status(r),'applicableRoutines':applicable(r),'leader':data.get('leaders',{}).get(norm(r['responsavel']),''),'percentLike':numeric(r.get('meta')) and abs(r['meta'])<=1.5 and (not numeric(r.get('real')) or abs(r['real'])<=1.5)} for r in rows]
     return {'rows':enriched,'years':years,'revision':revision,'updated':updated,'source':data.get('source',''),'scope':scope,'canAdmin':admin,'csrf':csrf if admin else '','user':{'name':identity.get('name',''),'email':identity.get('email','')}}
 
 def mutate(connect,payload):
@@ -179,7 +206,22 @@ def handle(env,start,server):
         raw=json.dumps(data,ensure_ascii=False).encode();start(str(code)+' '+{200:'OK',400:'Bad Request',401:'Unauthorized',403:'Forbidden',404:'Not Found',405:'Method Not Allowed',409:'Conflict'}[code],[('Content-Type','application/json; charset=utf-8'),('Content-Length',str(len(raw))),('Cache-Control','no-store'),('X-Content-Type-Options','nosniff')]);return [raw]
     user=server.sso_auth.current(env,server.connect)
     if not user:return reply(401,{'error':'Entre na Central para acessar a RAI.'})
-    active=server.session(env);method=env.get('REQUEST_METHOD','GET')
+    path=env.get('PATH_INFO','');method=env.get('REQUEST_METHOD','GET')
+    if path=='/api/cj/rai/profile':
+        return reply(200,profile_summary(server.connect,user)) if method=='GET' else reply(405,{})
+    if path=='/api/cj/rai/photo':
+        if method!='GET':return reply(405,{})
+        import base64,users_directory
+        person=parse_qs(env.get('QUERY_STRING','')).get('person',[''])[0]
+        with server.connect() as c:stored=json.loads(c.execute('SELECT data FROM cj_rai WHERE id=1').fetchone()[0])
+        visible,_=visible_rows(server.connect,user,stored)
+        if not any(r['responsavel']==person for r in visible):return reply(403,{'error':'Foto indisponível para este perfil.'})
+        with server.connect() as c:
+            matches=[u['email'] for u in users_directory.list_users(c) if norm(u['name'])==norm(person)]
+            photo=c.execute('SELECT data FROM profile_photos WHERE email=?',(matches[0],)).fetchone() if len(matches)==1 else None
+        if not photo:return reply(404,{})
+        raw=base64.b64decode(photo[0].split(',',1)[1]);start('200 OK',[('Content-Type','image/jpeg'),('Content-Length',str(len(raw))),('Cache-Control','private, max-age=60'),('X-Content-Type-Options','nosniff')]);return [raw]
+    active=server.session(env)
     if method=='GET':return reply(200,get(server.connect,user,bool(active),active[1] if active else ''))
     if method!='POST':return reply(405,{})
     if not active or env.get('HTTP_ORIGIN')!=server.PUBLIC_URL or not hmac.compare_digest(env.get('HTTP_X_CSRF_TOKEN',''),active[1]):return reply(403,{'error':'Entre como administrador para editar a RAI.'})

@@ -27,7 +27,7 @@ def has(identity,connect,module):return module in modules(identity,connect)
 def route_module(path):
     if path in ('/api/nac/people','/api/nac/photo') or path.startswith('/api/admin/users'):return 'usuarios'
     if path.startswith('/api/nac/'):return 'nac'
-    if path=='/api/cj/rai':return 'rai'
+    if path=='/api/cj/rai' or path.startswith('/api/cj/rai/'):return 'rai'
     if path.startswith('/api/cj/'):return 'produtividade_cj'
     if path=='/api/vacations':return 'ferias'
     return None
