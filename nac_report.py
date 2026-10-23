@@ -3,7 +3,7 @@ import json,secrets,time,re
 from decimal import Decimal,InvalidOperation,ROUND_HALF_UP
 from datetime import datetime,date
 from collections import Counter
-from nac_addon import norm,roster,today,lock
+from nac_addon import norm,roster,today,lock,display,historical_key,reporting_roster
 EXTERNAL=[{'email':'external:arruda','name':'Arruda','external':True},{'email':'external:igor','name':'Igor Pereira','external':True}]
 
 def setup(c):
@@ -33,11 +33,15 @@ def is_report(rows):return bool(rows) and 'responsavel pelo acordo' in {norm(v) 
 
 def plan(connect,identity,admin,rows,c):
     from users_directory import list_users
-    people={p['email']:p for p in roster(connect)};mapping={norm(p['name']):p['email'] for p in people.values()}
+    people={p['email']:p for p in roster(connect,include_inactive=True)};mapping={norm(p['name']):p['email'] for p in people.values()}
     with connect() as con:
         for u in list_users(con):
-            if u['email'] in people:mapping[norm(u['name'].split('|')[0])]=u['email']
+            people.setdefault(u['email'],{'email':u['email'],'name':display(u['name'])})
+            mapping[norm(u['name'].split('|')[0])]=u['email']
     mapping.update({'arruda adv':'external:arruda','arruda':'external:arruda','igor':'external:igor','acordo - igor ribeiro pereira':'external:igor','igor ribeiro pereira':'external:igor','igor pereira':'external:igor'})
+    for participant in reporting_roster(connect):
+        people.setdefault(participant['email'],participant)
+        mapping.setdefault(norm(participant['name']),participant['email'])
     header={norm(v):i for i,v in enumerate(rows[0])}
     existing={norm(r[1]):r for r in c.execute('SELECT id,reference,email,closed,client,note,active FROM nac_agreements').fetchall() if r[1]}
     detail={r[0]:r[1] for r in c.execute('SELECT agreement_id,data FROM nac_details').fetchall()}
@@ -48,7 +52,10 @@ def plan(connect,identity,admin,rows,c):
             i=header.get(norm(label));return str(row[i]).strip() if i is not None and i<len(row) else ''
         if not any(row):continue
         raw_name=get('Responsável pelo Acordo');email=mapping.get(norm(raw_name))
-        if email not in people or (not admin and email!=identity['email']):ignored.append({'row':number,'reason':'Fora dos participantes autorizados neste envio.'});continue
+        if not raw_name:
+            errors.append({'row':number,'error':'Informe o nome do responsável pelo acordo.'});continue
+        if email not in people:
+            email=historical_key(raw_name);people[email]={'email':email,'name':display(raw_name)}
         try:
             identifier=get('Id PA') or get('Id Processo')
             if not identifier or len(identifier)>100:raise ValueError('Id PA/Id Processo ausente ou inválido.')
@@ -64,7 +71,7 @@ def plan(connect,identity,admin,rows,c):
                 duplicates.append({'row':number,'reference':identifier});continue
             seen[key]=serialized;old=existing.get(key)
             if old:
-                if not old[6]:ignored.append({'row':number,'reason':'Registro cancelado no painel: não será reativado.'});continue
+                if not old[6]:ignored.append({'row':number,'name':raw_name,'reference':identifier,'code':'cancelled','reason':'Registro cancelado no painel. O admin precisa revisar o cancelamento antes de reutilizar este Id PA.'});continue
                 if not admin and old[2]!=email:raise ValueError('Apenas o admin pode mudar a atribuição de um registro existente.')
                 candidate['id']=old[0]
                 if old[2:5]==(email,closed,client[:120]) and detail.get(old[0])==serialized:duplicates.append({'row':number,'reference':identifier})
@@ -92,7 +99,7 @@ def commit(c,identity,plan):
 
 def dashboard(connect,month,participant='',client=''):
     from nac_addon import month_value
-    month=month_value(month);allowed={p['email']:p['name'] for p in roster(connect)}
+    month=month_value(month);allowed={p['email']:p['name'] for p in reporting_roster(connect,month)}
     with connect() as c:
         rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.active=1 AND a.closed LIKE ? ORDER BY a.closed DESC,a.id',(month+'-%',)).fetchall()
     records=[]

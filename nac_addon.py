@@ -33,12 +33,25 @@ def roster(connect,include_inactive=False):
         people += [{'email':u['key'],'name':display(u['name']),'external':True,'contactEmail':u['email']} for u in externals if include_inactive or u['active']]
         urls=nac_people.photos(c,[p['email'] for p in people])
     return [{**p,'photoUrl':urls.get(p['email'],'')} for p in people]
+def historical_key(name):
+    import hashlib
+    return 'historical:'+hashlib.sha256(norm(name).encode()).hexdigest()[:32]
+
+def reporting_roster(connect,month=None):
+    # Saved production remains part of NAC after a directory move/deactivation/deletion.
+    people={p['email']:p for p in roster(connect)}
+    with connect() as c:
+        rows=c.execute('SELECT email,name FROM nac_agreements WHERE active=1'+(' AND closed LIKE ?' if month else '')+' ORDER BY updated DESC',((month+'-%',) if month else ())).fetchall()
+        for email,name in rows:
+            if email not in people:people[email]={'email':email,'name':display(name),'historical':True,'external':True,'photoUrl':''}
+    return list(people.values())
+
 def month_value(value):
     if not isinstance(value,str) or not re.fullmatch(r'20\d\d-(0[1-9]|1[0-2])',value):raise ValueError('Selecione um mês válido.')
     return value
 
 def state(connect,identity,admin,month):
-    month=month_value(month);people=roster(connect);emails=[p['email'] for p in people];today_value=today();marks=','.join('?' for _ in emails) or 'NULL';where='closed LIKE ? AND email IN ('+marks+')';params=(month+'-%',*emails)
+    month=month_value(month);people=reporting_roster(connect,month);emails=[p['email'] for p in people];today_value=today();marks=','.join('?' for _ in emails) or 'NULL';where='closed LIKE ? AND email IN ('+marks+')';params=(month+'-%',*emails)
     with connect() as c:
         revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0];goal=c.execute('SELECT target FROM nac_goals WHERE month=?',(month,)).fetchone()
         totals=c.execute('SELECT email,COUNT(*),SUM(CASE WHEN closed=? THEN 1 ELSE 0 END),MAX(created) FROM nac_agreements WHERE '+where+' AND active=1 GROUP BY email',(today_value,*params)).fetchall()
@@ -51,7 +64,7 @@ def state(connect,identity,admin,month):
     for i,row in enumerate(ranking):
         if row['count']!=last:position=i+1;last=row['count']
         row['rank']=position
-    return {'revision':revision,'month':month,'today':today_value,'serverTime':time.time(),'dateBasis':'Data Preenchimento','goal':goal[0] if goal else 0,'total':sum(r[1] for r in totals),'todayCount':sum(r[2] or 0 for r in totals),'ranking':ranking,'roster':people,'records':records,'canAdmin':admin,'canRegister':admin or identity['email'] in emails,'user':{'email':identity['email'],'name':display(identity['name'])},'latest':max((r[3] for r in totals),default=0)}
+    return {'revision':revision,'month':month,'today':today_value,'serverTime':time.time(),'dateBasis':'Data Preenchimento','goal':goal[0] if goal else 0,'total':sum(r[1] for r in totals),'todayCount':sum(r[2] or 0 for r in totals),'ranking':ranking,'roster':people,'records':records,'canAdmin':admin,'canImport':admin,'canRegister':admin or identity['email'] in {p['email'] for p in roster(connect)},'user':{'email':identity['email'],'name':display(identity['name'])},'latest':max((r[3] for r in totals),default=0)}
 
 def text_field(data,key,limit):
     value=data.get(key,'')
@@ -232,10 +245,11 @@ def import_plan(connect,identity,admin,rows,c):
     if not rows:raise ValueError('A planilha está vazia.')
     headers={norm(v):i for i,v in enumerate(rows[0])};columns={k:next((i for v,i in headers.items() if v in names),None) for k,names in aliases.items()}
     if columns['date'] is None or columns['reference'] is None:raise ValueError('Inclua as colunas Data e Identificador na primeira linha.')
-    people={p['email']:p for p in roster(connect)};name_map={}
+    people={p['email']:p for p in roster(connect,include_inactive=True)};name_map={}
     with connect() as directory:
         users=users_directory.list_users(directory)
     for u in users:
+        people.setdefault(u['email'],{'email':u['email'],'name':display(u['name'])})
         if u['email'] in people:
             for label in (u['name'].split('|')[0],display(u['name'])):name_map.setdefault(norm(label),set()).add(u['email'])
     for p in people.values():name_map.setdefault(norm(p['name']),set()).add(p['email'])
@@ -251,8 +265,9 @@ def import_plan(connect,identity,admin,rows,c):
             if email and label and (len(candidates)!=1 or email not in candidates):raise ValueError('Nome e e-mail não correspondem à mesma negociadora.')
             if not email and len(candidates)==1:email=next(iter(candidates))
             if not email and not label and not admin:email=identity['email']
-            if email not in people:raise ValueError('Negociadora não identificada ou fora do NAC permitido.')
-            if not admin and email!=identity['email']:raise ValueError('Você só pode importar seus próprios acordos.')
+            if email not in people:
+                if not label:raise ValueError('Informe o nome do responsável para preservar sua autoria no histórico.')
+                email=historical_key(label);people[email]={'email':email,'name':display(label)}
             value=get('date');parsed=None
             for pattern in ('%Y-%m-%d','%d/%m/%Y','%d-%m-%Y'):
                 try:parsed=datetime.strptime(value,pattern).date();break
@@ -270,6 +285,7 @@ def import_plan(connect,identity,admin,rows,c):
     return {'valid':valid,'errors':errors,'duplicates':duplicates,'totalRows':len(valid)+len(errors)+len(duplicates)}
 
 def import_agreements(connect,identity,admin,data):
+    if not admin:return 403,{'error':'Apenas o admin pode importar planilhas do NAC.'}
     import hashlib
     name,raw=decode_file(data)
     try:rows=sheet_rows(name,raw,sheet_name='Geral') if name.lower().endswith('.xlsx') else sheet_rows(name,raw)

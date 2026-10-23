@@ -73,7 +73,7 @@ def celebration(connect,identity):
     with connect() as c:
         if c.execute('SELECT seen FROM nac_seen WHERE email=? AND month=?',(identity['email'],month)).fetchone():return {'show':False}
     # Inclui integrantes que ficaram inativas depois do encerramento do mês.
-    people=nac_addon.roster(connect,include_inactive=True);keys=[p['email'] for p in people]
+    people=nac_addon.reporting_roster(connect,month);keys=[p['email'] for p in people]
     if not keys:return {'show':False}
     with connect() as c:
         rows=c.execute('SELECT email,COUNT(*) FROM nac_agreements WHERE active=1 AND closed LIKE ? AND email IN ('+','.join('?' for _ in keys)+') GROUP BY email',(month+'-%',*keys)).fetchall()
