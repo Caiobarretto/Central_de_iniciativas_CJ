@@ -13,6 +13,11 @@ def vacation_loading(html):
         end=html.find('}year=data.planningYear;',start)
         if end>=0:html=html[:start]+"}catch(error){canEdit=false;busyUI?.error(error);return"+html[end:]
     html=html.replace('month=0;filterOptions();render();timer=setInterval','month=0;filterOptions();render();busyUI?.end();timer=setInterval',1)
+    html=html.replace('canEdit=!!window.CJ_VACATION_EDIT&&res.ok&&session.authenticated&&session.canAdmin','canEdit=!!data.canPropose',1)
+    approved_save="async function requestSave(next){const previous=data;const res=await fetch('/api/vacations',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},body:JSON.stringify({...next,revision:data.revision})});const result=await res.json();if(!res.ok)throw Error(result.error||'Não foi possível solicitar a alteração.');try{data=await refresh()}catch{data=previous}render();return result}"
+    html=re.sub(r'async function requestSave\(next\)\{[^\n]*\}',lambda m:approved_save,html,count=1)
+    workflow=(Path(__file__).parent/'cj'/'vacation_workflow.js').read_text()
+    html=html.replace('</body>','<script>'+workflow+'</script></body>',1)
     return html
 
 def prepare(body):

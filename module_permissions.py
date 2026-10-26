@@ -2,7 +2,7 @@
 import json,io,hmac,time
 import admin_access,users_directory
 OWNER=admin_access.OWNER
-MODULES={'central':'Central · iniciativas','nac':'NAC','rai':'RAI','produtividade_cj':'Produtividade CJ · Resultados CJ','usuarios':'Usuários e e-mails','ferias':'Férias'}
+MODULES={'central':'Central · iniciativas','nac':'NAC','rai':'RAI','produtividade_cj':'Produtividade CJ · Resultados CJ','usuarios':'Usuários e e-mails','ferias':'Férias','pessoas':'Pessoas · datas e estágios','igp':'IGP','iqn':'IQN'}
 
 def register(key,label):
     if not isinstance(key,str) or not key.replace('_','').isalnum():raise ValueError('Identificador de módulo inválido.')
@@ -25,6 +25,10 @@ def modules(identity,connect):
 def has(identity,connect,module):return module in modules(identity,connect)
 
 def route_module(path):
+    if path.startswith('/api/people/'):return 'pessoas'
+    if path=='/api/cj/igp':return 'igp'
+    if path=='/api/cj/iqn':return 'iqn'
+    if path.startswith('/api/vacations'):return 'ferias'
     if path in ('/api/nac/people','/api/nac/photo') or path.startswith('/api/admin/users'):return 'usuarios'
     if path.startswith('/api/nac/'):return 'nac'
     if path=='/api/cj/rai' or path.startswith('/api/cj/rai/'):return 'rai'

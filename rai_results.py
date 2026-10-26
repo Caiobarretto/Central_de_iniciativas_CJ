@@ -159,7 +159,12 @@ def get(connect,identity,admin=False,csrf=''):
     with connect() as c:revision,raw,updated=c.execute('SELECT revision,data,updated FROM cj_rai WHERE id=1').fetchone()
     data=json.loads(raw);rows,scope=visible_rows(connect,identity,data);years=sorted({r['ano'] for r in rows},reverse=True)
     urls=photo_urls(connect,rows)
-    enriched=[{**r,'photoUrl':urls.get(r['responsavel'],''),'id':identifier(r),'displayName':short(r['responsavel']),'status':status(r),'applicableRoutines':applicable(r),'leader':data.get('leaders',{}).get(norm(r['responsavel']),''),'percentLike':numeric(r.get('meta')) and abs(r['meta'])<=1.5 and (not numeric(r.get('real')) or abs(r['real'])<=1.5)} for r in rows]
+    from team_access import directory,resolve
+    users=directory(connect);profiles={norm(u['name']):u for u in users};by_email={u['email']:u for u in users}
+    def current_leader(r):
+        label=profiles.get(norm(r['responsavel']),{}).get('leader') or data.get('leaders',{}).get(norm(r['responsavel']),'')
+        return by_email.get(resolve(label,users),{}).get('name',label).split('|')[0].strip()
+    enriched=[{**r,'photoUrl':urls.get(r['responsavel'],''),'id':identifier(r),'displayName':short(r['responsavel']),'status':status(r),'applicableRoutines':applicable(r),'leader':current_leader(r),'currentSubunit':profiles.get(norm(r['responsavel']),{}).get('subunit',''),'percentLike':numeric(r.get('meta')) and abs(r['meta'])<=1.5 and (not numeric(r.get('real')) or abs(r['real'])<=1.5)} for r in rows]
     return {'rows':enriched,'years':years,'revision':revision,'updated':updated,'source':data.get('source',''),'scope':scope,'canAdmin':admin,'csrf':csrf if admin else '','user':{'name':identity.get('name',''),'email':identity.get('email','')}}
 
 def mutate(connect,payload):
