@@ -24,6 +24,15 @@ def modules(identity,connect):
 
 def has(identity,connect,module):return module in modules(identity,connect)
 
+# Liberação temporária: retire uma chave para permitir a leitura ao time geral.
+RESTRICTED_READ_MODULES={'pessoas','iqn'}
+def can_view(identity,connect,module):
+    if not identity:return False
+    if module not in RESTRICTED_READ_MODULES:return True
+    if admin_access.allowed(identity,connect):return True
+    from team_access import directory,reports
+    return bool(reports(identity,directory(connect)))
+
 def route_module(path):
     if path.startswith('/api/people/'):return 'pessoas'
     if path=='/api/cj/igp':return 'igp'

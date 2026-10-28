@@ -89,6 +89,12 @@ def handle(env,start,server):
         return reply(start,401,{'error':'Entre na Central.'})
     path=env['PATH_INFO'];method=env.get('REQUEST_METHOD','GET');q=parse_qs(env.get('QUERY_STRING',''))
     try:
+        if path=='/api/people/access':
+            if method!='GET':return reply(start,405,{})
+            return reply(start,200,{'people':permissions.can_view(user,server.connect,'pessoas'),'iqn':permissions.can_view(user,server.connect,'iqn')})
+        if not permissions.can_view(user,server.connect,'pessoas'):
+            if path=='/pessoas':return reply(start,403,raw='<html lang="pt-BR"><meta charset="utf-8"><title>Acesso restrito</title><body style="font:16px Segoe UI,sans-serif;background:#f6f3fa;color:#62417c;padding:10vh 10%"><h1>Acesso restrito</h1><p>Pessoas e aniversários está disponível apenas para admins e lideranças neste momento.</p><a href="/central">Voltar à Central</a></body></html>'.encode(),mime='text/html; charset=utf-8')
+            return reply(start,403,{'error':'Pessoas e aniversários está disponível apenas para admins e lideranças neste momento.'})
         if path=='/pessoas':
             if method!='GET':return reply(start,405,{})
             from pathlib import Path

@@ -40,6 +40,7 @@ def handle(env,start,server):
     if not identity:return reply(start,401,{'error':'Entre na Central.'})
     kind=env['PATH_INFO'].rsplit('/',1)[-1]
     if kind not in ('igp','iqn'):return reply(start,404,{})
+    if not permissions.can_view(identity,server.connect,kind):return reply(start,403,{'error':'O IQN está disponível apenas para admins e lideranças neste momento.'})
     try:
         period=period_value(parse_qs(env.get('QUERY_STRING','')).get('period',['2026-Q3' if kind=='igp' else '2026-Q2'])[0]);method=env.get('REQUEST_METHOD','GET');active=server.session(env)
         if method=='GET':
