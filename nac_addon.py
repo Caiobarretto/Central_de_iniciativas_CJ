@@ -254,7 +254,7 @@ def import_plan(connect,identity,admin,rows,c):
             for label in (u['name'].split('|')[0],display(u['name'])):name_map.setdefault(norm(label),set()).add(u['email'])
     for p in people.values():name_map.setdefault(norm(p['name']),set()).add(p['email'])
     name_map.update({'arruda adv':{'external:arruda'},'acordo - igor ribeiro pereira':{'external:igor'},'igor ribeiro pereira':{'external:igor'},'igor pereira':{'external:igor'},'arruda':{'external:arruda'}})
-    existing={norm(r[0]) for r in c.execute('SELECT reference FROM nac_agreements WHERE active=1 AND reference<>?',('',)).fetchall()};seen=set();valid=[];errors=[];duplicates=[]
+    seen={};valid=[];errors=[];duplicates=[]
     for number,row in enumerate(rows[1:],2):
         if not any(str(v).strip() for v in row):continue
         def get(key):
@@ -278,8 +278,12 @@ def import_plan(connect,identity,admin,rows,c):
             fields={'reference':reference,'client':client,'note':note}
             for key,limit in (('reference',100),('client',120),('note',500)):text_field(fields,key,limit)
             key=norm(reference)
-            if key in existing or key in seen:duplicates.append({'row':number,'reference':reference});continue
-            seen.add(key);valid.append({'row':number,'email':email,'name':people[email]['name'],'date':parsed.isoformat(),**fields})
+            candidate={'row':number,'email':email,'name':people[email]['name'],'date':parsed.isoformat(),**fields}
+            signature={k:v for k,v in candidate.items() if k!='row'}
+            if key in seen:
+                if seen[key]!=signature:raise ValueError('Mesmo identificador aparece com dados diferentes no arquivo.')
+                duplicates.append({'row':number,'reference':reference});continue
+            seen[key]=signature;valid.append(candidate)
         except ValueError as e:errors.append({'row':number,'error':str(e)})
     if len(valid)+len(errors)+len(duplicates)>2000:raise ValueError('Importe até 2.000 acordos por arquivo.')
     return {'valid':valid,'errors':errors,'duplicates':duplicates,'totalRows':len(valid)+len(errors)+len(duplicates)}
@@ -297,15 +301,12 @@ def import_agreements(connect,identity,admin,data):
     with connect() as c:
         if action=='commit':lock(c)
         import nac_report
-        if nac_report.is_report(rows):
-            plan=nac_report.plan(connect,identity,admin,rows,c)
-            return (200,plan) if action=='preview' else nac_report.commit(c,identity,plan)
-        plan=import_plan(connect,identity,admin,rows,c)
+        plan=nac_report.plan(connect,identity,admin,rows,c) if nac_report.is_report(rows) else import_plan(connect,identity,admin,rows,c)
+        revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
+        current=c.execute('SELECT reference FROM nac_agreements WHERE active=1').fetchall()
+        incoming={norm(r['reference']) for r in plan['valid']}
+        plan.update(mode='replace_all',revision=revision,currentCount=len(current),replacementCount=len(plan['valid']),removedCount=sum(norm(r[0]) not in incoming for r in current))
         if action=='preview':return 200,plan
-        if plan['errors']:return 400,{'error':'Corrija as linhas inválidas antes de importar. Nenhum registro foi salvo.',**plan}
-        now=time.time()
-        for row in plan['valid']:
-            identifier=secrets.token_urlsafe(20)
-            c.execute('INSERT INTO nac_agreements VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',(identifier,row['email'],row['name'],row['date'],row['reference'],row['client'],row['note'],identity['email'],now,now,1,'import-'+identifier))
-        if plan['valid']:c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
-    return 200,{'ok':True,'imported':len(plan['valid']),'skipped':len(plan['duplicates'])}
+        if data.get('replaceAll') is not True or type(data.get('revision')) is not int or data['revision']!=revision:
+            return 409,{'error':'Analise a planilha novamente e confirme a substituição de toda a base do NAC.'}
+        return nac_report.commit(c,identity,plan)

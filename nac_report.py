@@ -8,6 +8,7 @@ EXTERNAL=[{'email':'external:arruda','name':'Arruda','external':True},{'email':'
 
 def setup(c):
     c.execute('CREATE TABLE IF NOT EXISTS nac_details (agreement_id TEXT PRIMARY KEY,data TEXT NOT NULL)')
+    c.execute('CREATE TABLE IF NOT EXISTS nac_import_backups (id TEXT PRIMARY KEY,created DOUBLE PRECISION NOT NULL,actor TEXT NOT NULL,data TEXT NOT NULL)')
     c.execute('CREATE INDEX IF NOT EXISTS nac_month_active ON nac_agreements(closed,active)')
     c.execute('CREATE INDEX IF NOT EXISTS nac_by_reference ON nac_agreements(reference)')
 
@@ -43,8 +44,6 @@ def plan(connect,identity,admin,rows,c):
         people.setdefault(participant['email'],participant)
         mapping.setdefault(norm(participant['name']),participant['email'])
     header={norm(v):i for i,v in enumerate(rows[0])}
-    existing={norm(r[1]):r for r in c.execute('SELECT id,reference,email,closed,client,note,active FROM nac_agreements').fetchall() if r[1]}
-    detail={r[0]:r[1] for r in c.execute('SELECT agreement_id,data FROM nac_details').fetchall()}
     valid=[];updates=[];errors=[];duplicates=[];ignored=[];seen={}
     specs={'stage':'Etapa da Realização do Acordo','cell':'Célula','costCenter':'Centro de Custo','client':'Cliente','uf':'UF','segment':'Segmento','project':'Projeto','product':'Produto','strategy':'Estratégia','pay':'Tem Obrigação Pagar','do':'Tem Obrigação Fazer','processId':'Id Processo','process':'Número Processo','pa':'Id PA','hearing':'Data Audiencia','agreementDate':'Data Acordo Realizado','filledDate':'Data Preenchimento','phase':'Fase','processStatus':'Status Processo'}
     for number,row in enumerate(rows[1:],2):
@@ -69,33 +68,33 @@ def plan(connect,identity,admin,rows,c):
             if key in seen:
                 if seen[key]!=serialized:raise ValueError('Mesmo identificador aparece com dados diferentes no arquivo.')
                 duplicates.append({'row':number,'reference':identifier});continue
-            seen[key]=serialized;old=existing.get(key)
-            if old:
-                if not old[6]:ignored.append({'row':number,'name':raw_name,'reference':identifier,'code':'cancelled','reason':'Registro cancelado no painel. O admin precisa revisar o cancelamento antes de reutilizar este Id PA.'});continue
-                if not admin and old[2]!=email:raise ValueError('Apenas o admin pode mudar a atribuição de um registro existente.')
-                candidate['id']=old[0]
-                if old[2:5]==(email,closed,client[:120]) and detail.get(old[0])==serialized:duplicates.append({'row':number,'reference':identifier})
-                else:updates.append(candidate)
-            else:valid.append(candidate)
+            seen[key]=serialized;valid.append(candidate)
         except ValueError as e:errors.append({'row':number,'error':str(e)})
     return {'format':'relatorio_realizados','dateBasis':'Data Preenchimento','valid':valid,'updates':updates,'errors':errors,'duplicates':duplicates,'ignored':ignored,'ignoredCount':len(ignored),'totalRows':len(rows)-1,'sourceSheet':'Geral' if 'data acordo realizado' in header else 'Resultado'}
 
 def commit(c,identity,plan):
-    if plan['errors']:return 400,{'error':'Corrija as linhas inválidas. Nenhuma alteração foi salva.',**plan}
+    # Caller holds the NAC lock; validation, backup and replacement share one transaction.
+    if plan['errors']:return 400,{'error':'Corrija as linhas inválidas. A base anterior foi preservada.',**plan}
+    if not plan['valid']:return 400,{'error':'A planilha não contém acordos válidos. A base anterior foi preservada.'}
     now=time.time();agreements=[];details=[]
-    for r in plan['valid']+plan['updates']:
-        identifier=r.get('id') or secrets.token_urlsafe(20);r['id']=identifier
-        agreements.append((identifier,r['email'],r['name'],r['date'],r['reference'],r['client'],r['note'],identity['email'],now,now,1,'report-'+secrets.token_urlsafe(24)))
-        details.append((identifier,json.dumps(r['extra'],ensure_ascii=False,sort_keys=True)))
-    # Multi-row statements avoid a separate database round trip for every agreement.
+    for r in plan['valid']:
+        identifier=secrets.token_urlsafe(20)
+        agreements.append((identifier,r['email'],r['name'],r['date'],r['reference'],r['client'],r['note'],identity['email'],now,now,1,'import-'+identifier))
+        if 'extra' in r:details.append((identifier,json.dumps(r['extra'],ensure_ascii=False,sort_keys=True)))
+    backup={'agreements':[list(r) for r in c.execute('SELECT * FROM nac_agreements').fetchall()],
+            'details':[list(r) for r in c.execute('SELECT * FROM nac_details').fetchall()],
+            'revision':plan['revision']}
+    c.execute('INSERT INTO nac_import_backups VALUES (?,?,?,?)',(secrets.token_urlsafe(20),now,identity['email'],json.dumps(backup,ensure_ascii=False)))
+    c.execute('DELETE FROM nac_details')
+    c.execute('DELETE FROM nac_agreements')
     for start in range(0,len(agreements),50):
         batch=agreements[start:start+50]
-        c.execute('INSERT INTO nac_agreements VALUES '+','.join(['('+','.join(['?']*12)+')']*len(batch))+' ON CONFLICT (id) DO UPDATE SET email=excluded.email,name=excluded.name,closed=excluded.closed,client=excluded.client,updated=excluded.updated',tuple(v for row in batch for v in row))
+        c.execute('INSERT INTO nac_agreements VALUES '+','.join(['('+','.join(['?']*12)+')']*len(batch)),tuple(v for row in batch for v in row))
     for start in range(0,len(details),100):
         batch=details[start:start+100]
-        c.execute('INSERT INTO nac_details VALUES '+','.join(['(?,?)']*len(batch))+' ON CONFLICT (agreement_id) DO UPDATE SET data=excluded.data',tuple(v for row in batch for v in row))
-    if plan['valid'] or plan['updates']:c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
-    return 200,{'ok':True,'imported':len(plan['valid']),'updated':len(plan['updates']),'skipped':len(plan['duplicates']),'ignored':len(plan['ignored'])}
+        c.execute('INSERT INTO nac_details VALUES '+','.join(['(?,?)']*len(batch)),tuple(v for row in batch for v in row))
+    c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
+    return 200,{'ok':True,'mode':'replace_all','imported':len(agreements),'total':len(agreements),'removed':plan['removedCount'],'skipped':len(plan['duplicates']),'revision':plan['revision']+1}
 
 def dashboard(connect,month,participant='',client=''):
     from nac_addon import month_value
