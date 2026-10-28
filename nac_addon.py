@@ -291,6 +291,9 @@ def import_plan(connect,identity,admin,rows,c):
 def import_agreements(connect,identity,admin,data):
     if not admin:return 403,{'error':'Apenas o admin pode importar planilhas do NAC.'}
     import hashlib
+    import nac_report
+    if data.get('action') in ('backups','restore_preview','restore_commit'):
+        return nac_report.recovery(connect,identity,data)
     name,raw=decode_file(data)
     try:rows=sheet_rows(name,raw,sheet_name='Geral') if name.lower().endswith('.xlsx') else sheet_rows(name,raw)
     except ValueError as e:
@@ -303,10 +306,12 @@ def import_agreements(connect,identity,admin,data):
         import nac_report
         plan=nac_report.plan(connect,identity,admin,rows,c) if nac_report.is_report(rows) else import_plan(connect,identity,admin,rows,c)
         revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
-        current=c.execute('SELECT reference FROM nac_agreements WHERE active=1').fetchall()
-        incoming={norm(r['reference']) for r in plan['valid']}
-        plan.update(mode='replace_all',revision=revision,currentCount=len(current),replacementCount=len(plan['valid']),removedCount=sum(norm(r[0]) not in incoming for r in current))
+        months=sorted({r['date'][:7] for r in plan['valid']})
+        current=c.execute('SELECT reference,closed,active FROM nac_agreements').fetchall()
+        affected=[r for r in current if r[1][:7] in months and r[2]]
+        incoming={(r['date'][:7],norm(r['reference'])) for r in plan['valid']}
+        plan.update(mode='replace_months',months=months,revision=revision,currentCount=len(affected),preservedCount=sum(bool(r[2]) for r in current if r[1][:7] not in months),replacementCount=len(plan['valid']),removedCount=sum((r[1][:7],norm(r[0])) not in incoming for r in affected))
         if action=='preview':return 200,plan
-        if data.get('replaceAll') is not True or type(data.get('revision')) is not int or data['revision']!=revision:
-            return 409,{'error':'Analise a planilha novamente e confirme a substituição de toda a base do NAC.'}
+        if data.get('replaceMonths') is not True or type(data.get('revision')) is not int or data['revision']!=revision:
+            return 409,{'error':'Analise a planilha novamente e confirme a substituição somente dos meses indicados.'}
         return nac_report.commit(c,identity,plan)

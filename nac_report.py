@@ -81,12 +81,12 @@ def commit(c,identity,plan):
         identifier=secrets.token_urlsafe(20)
         agreements.append((identifier,r['email'],r['name'],r['date'],r['reference'],r['client'],r['note'],identity['email'],now,now,1,'import-'+identifier))
         if 'extra' in r:details.append((identifier,json.dumps(r['extra'],ensure_ascii=False,sort_keys=True)))
-    backup={'agreements':[list(r) for r in c.execute('SELECT * FROM nac_agreements').fetchall()],
-            'details':[list(r) for r in c.execute('SELECT * FROM nac_details').fetchall()],
-            'revision':plan['revision']}
-    c.execute('INSERT INTO nac_import_backups VALUES (?,?,?,?)',(secrets.token_urlsafe(20),now,identity['email'],json.dumps(backup,ensure_ascii=False)))
-    c.execute('DELETE FROM nac_details')
-    c.execute('DELETE FROM nac_agreements')
+    save_backup(c,identity,plan['revision'])
+    months=plan['months']
+    # Exact year/month scope; details are removed only for the affected agreements.
+    for month in months:
+        c.execute('DELETE FROM nac_details WHERE agreement_id IN (SELECT id FROM nac_agreements WHERE closed LIKE ?)',(month+'-%',))
+        c.execute('DELETE FROM nac_agreements WHERE closed LIKE ?',(month+'-%',))
     for start in range(0,len(agreements),50):
         batch=agreements[start:start+50]
         c.execute('INSERT INTO nac_agreements VALUES '+','.join(['('+','.join(['?']*12)+')']*len(batch)),tuple(v for row in batch for v in row))
@@ -94,7 +94,45 @@ def commit(c,identity,plan):
         batch=details[start:start+100]
         c.execute('INSERT INTO nac_details VALUES '+','.join(['(?,?)']*len(batch)),tuple(v for row in batch for v in row))
     c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
-    return 200,{'ok':True,'mode':'replace_all','imported':len(agreements),'total':len(agreements),'removed':plan['removedCount'],'skipped':len(plan['duplicates']),'revision':plan['revision']+1}
+    return 200,{'ok':True,'mode':'replace_months','months':plan['months'],'preserved':plan['preservedCount'],'imported':len(agreements),'total':len(agreements),'removed':plan['removedCount'],'skipped':len(plan['duplicates']),'revision':plan['revision']+1}
+
+def save_backup(c,identity,revision):
+    backup={'agreements':[list(r) for r in c.execute('SELECT * FROM nac_agreements').fetchall()],
+            'details':[list(r) for r in c.execute('SELECT * FROM nac_details').fetchall()], 'revision':revision}
+    c.execute('INSERT INTO nac_import_backups VALUES (?,?,?,?)',(secrets.token_urlsafe(20),time.time(),identity['email'],json.dumps(backup,ensure_ascii=False)))
+
+def recovery(connect,identity,data):
+    action=data['action']
+    with connect() as c:
+        if action=='restore_commit':lock(c)
+        revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
+        current_months={r[0][:7] for r in c.execute('SELECT closed FROM nac_agreements').fetchall()}
+        if action=='backups':
+            backups=[]
+            for identifier,created,actor,raw in c.execute('SELECT id,created,actor,data FROM nac_import_backups ORDER BY created DESC').fetchall():
+                snapshot=json.loads(raw);counts=Counter(r[3][:7] for r in snapshot['agreements'] if r[10])
+                backups.append({'id':identifier,'created':created,'actor':actor,'count':sum(counts.values()),'months':dict(sorted(counts.items())),'missingMonths':sorted(set(counts)-current_months)})
+            return 200,{'backups':backups,'revision':revision}
+        identifier=data.get('backupId')
+        if not isinstance(identifier,str) or len(identifier)>100:raise ValueError('Selecione uma cópia de segurança.')
+        found=c.execute('SELECT data FROM nac_import_backups WHERE id=?',(identifier,)).fetchone()
+        if not found:return 404,{'error':'Cópia de segurança não encontrada.'}
+        snapshot=json.loads(found[0]);months=sorted({r[3][:7] for r in snapshot['agreements']}-current_months)
+        agreements=[r for r in snapshot['agreements'] if r[3][:7] in months]
+        summary={'backupId':identifier,'months':months,'restoreCount':sum(bool(r[10]) for r in agreements),'revision':revision}
+        if action=='restore_preview':return 200,summary
+        if data.get('confirmRecovery') is not True or type(data.get('revision')) is not int or data['revision']!=revision:
+            return 409,{'error':'A base mudou. Analise a recuperação novamente.'}
+        if not agreements:return 400,{'error':'Esta cópia não tem meses ausentes para recuperar. Nenhum mês existente será alterado.'}
+        # Avoid stale identifiers/request keys colliding with records in preserved months.
+        save_backup(c,identity,revision);id_map={}
+        for r in agreements:
+            r=list(r);old_id=r[0];r[0]=secrets.token_urlsafe(20);r[11]='restore-'+r[0];id_map[old_id]=r[0]
+            c.execute('INSERT INTO nac_agreements VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',tuple(r))
+        for old_id,detail in snapshot.get('details',[]):
+            if old_id in id_map:c.execute('INSERT INTO nac_details VALUES (?,?)',(id_map[old_id],detail))
+        c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
+        return 200,{'ok':True,**summary,'revision':revision+1}
 
 def dashboard(connect,month,participant='',client=''):
     from nac_addon import month_value
