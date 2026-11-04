@@ -158,7 +158,7 @@ def dashboard(connect,month,participant='',client='',campaign=''):
             key=nac_campaign.alias_name(extra.get('responsible',r[2]),allowed) or r[1]
             if key!=r[1]:r=(r[0],key,*r[2:])
         if r[1] not in allowed:continue
-        if campaign and (r[3]!=nac_campaign.config()['date'] or not nac_campaign.is_gol(r[5],extra)):continue
+        if campaign and (not nac_campaign.is_gol(r[5],extra) or not (r[3]==nac_campaign.config()['date'] or extra.get('campaignId')==campaign)):continue
         records.append({'id':r[0],'email':r[1],'name':allowed[r[1]],'date':r[3],'reference':r[4],'client':r[5],**extra})
     clients=sorted({r['client'] for r in records if r.get('client')})
     records=[r for r in records if (not participant or r['email']==participant) and (not client or r['client']==client)]

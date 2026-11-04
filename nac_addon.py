@@ -76,9 +76,9 @@ def agreement(connect,identity,admin,data):
     if data.get('campaign'):
         import nac_campaign
         if data['campaign']!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
-        if action=='create' and not nac_campaign.metadata()['registrationOpen']:return 403,{'error':'Os registros do mutirão estarão abertos somente em 06/11/2026.'}
+        if action=='create' and not nac_campaign.metadata()['registrationOpen']:return 403,{'error':'Os registros do mutirão ficam disponíveis de 04/11 a 06/11/2026.'}
         people={p['email']:p for p in nac_campaign.participants(connect)}
-        if action!='cancel' and (data.get('date')!=nac_campaign.config()['date'] or not nac_campaign.is_gol(data.get('client',''))):raise ValueError('No mutirão, informe GOL e a data 06/11/2026.')
+        if action!='cancel' and (not isinstance(data.get('date'),str) or not nac_campaign.config()['previewFrom']<=data['date']<=nac_campaign.config()['date'] or not nac_campaign.is_gol(data.get('client',''))):raise ValueError('No mutirão, informe GOL e a data real do fechamento, entre 04/11 e 06/11/2026.')
     if action!='create' and not admin:return 403,{'error':'Apenas o admin pode corrigir ou cancelar registros.'}
     if action=='create' and not admin:email=identity['email']
     if action!='cancel':
@@ -113,6 +113,12 @@ def agreement(connect,identity,admin,data):
         if action=='create':c.execute('INSERT INTO nac_agreements VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',(identifier,email,people[email]['name'],closed,reference,client,note,identity['email'],now,now,1,request_key))
         elif action=='edit':c.execute('UPDATE nac_agreements SET email=?,name=?,closed=?,reference=?,client=?,note=?,updated=? WHERE id=?',(email,people[email]['name'],closed,reference,client,note,now,identifier))
         else:c.execute('UPDATE nac_agreements SET active=0,updated=? WHERE id=?',(now,identifier))
+        if data.get('campaign') and action!='cancel':
+            previous=c.execute('SELECT data FROM nac_details WHERE agreement_id=?',(identifier,)).fetchone()
+            extra=json.loads(previous[0]) if previous else {}
+            extra.update(campaignId=data['campaign'],filledDate=closed,client=client)
+            extra.setdefault('source','manual-campaign');extra.setdefault('responsible',people[email]['name'])
+            c.execute('INSERT INTO nac_details VALUES (?,?) ON CONFLICT (agreement_id) DO UPDATE SET data=excluded.data',(identifier,json.dumps(extra,ensure_ascii=False,sort_keys=True)))
         c.execute('UPDATE nac_meta SET revision=? WHERE id=1',(revision+1,))
     return 200,{'ok':True,'id':identifier,'revision':revision+1}
 
