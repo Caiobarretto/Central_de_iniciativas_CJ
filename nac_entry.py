@@ -1,5 +1,5 @@
 """Entrada adicional da Central: Painel NAC e otimizações, sem substituir os arquivos do núcleo."""
-import gzip,time
+import gzip,time,base64,html
 from pathlib import Path
 import nac_people
 import cj_results
@@ -22,6 +22,13 @@ original_admin_session=module_permissions.install(server)
 NAV='''<style>#nacModuleTab{position:relative;isolation:isolate;padding:10px 18px;border-radius:12px;font-weight:700;background:linear-gradient(120deg,#311353,#532275)!important;color:#fff!important;border:1px solid #a471db!important;box-shadow:0 0 12px #753aab66,0 0 26px #8f5bc433;overflow:visible}#nacModuleTab:before{content:'';position:absolute;inset:-3px;border-radius:inherit;border:1px solid #d2aff588;pointer-events:none;animation:nacHalo 3s ease-in-out infinite}#nacModuleTab:after{content:'\\2726';color:#e9ceff;position:absolute;top:-8px;right:5px;text-shadow:0 0 10px #fff;animation:nacSpark 2s ease-in-out infinite}@keyframes nacHalo{50%{box-shadow:0 0 18px #ae6ff0aa;opacity:.45}}@keyframes nacSpark{50%{opacity:.35;transform:scale(.7) rotate(25deg)}}@media(prefers-reduced-motion:reduce){#nacModuleTab:before,#nacModuleTab:after{animation:none}}</style><script data-nac-addon="1">(()=>{const nav=document.querySelector('.central-module-tabs');if(!nav||document.getElementById('nacModuleTab'))return;const button=document.createElement('button');button.type='button';button.id='nacModuleTab';button.textContent='Painel NAC';button.setAttribute('aria-label','Painel NAC');button.onclick=()=>{location.href='/nac'};nav.append(button)})();</script>'''.encode()
 
 ROUTES={'/api/nac/campaign','/api/nac/campaign/material','/nac','/nac/','/api/nac/state','/api/nac/agreements','/api/nac/goal','/api/nac/import','/api/nac/template','/api/nac/dashboard'}
+
+def campaign_navigation():
+    import nac_campaign
+    campaign=nac_campaign.config();identifier=html.escape(campaign['id'],quote=True)
+    raw=base64.b64encode((Path(__file__).parent/'nac'/'gol'/'logo-gol.png').read_bytes()).decode()
+    logo='<svg viewBox="620 172 680 276" role="img" aria-label="GOL" style="display:block;width:52px;height:22px" xmlns="http://www.w3.org/2000/svg"><image href="data:image/png;base64,'+raw+'" width="1920" height="620"/></svg>'
+    return ('<nav id="golPanelNav" class="gol-switch" aria-label="Selecionar painel"><a href="/nac">Painel NAC</a><a href="/nac?campaign='+identifier+'" class="gol-link" style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(110deg,#ff7b26,#eb5a08);color:#fff;padding:8px 14px;border-radius:12px;font-weight:700;text-decoration:none"><span style="display:inline-grid;place-items:center;width:64px;height:30px;background:#fff;border-radius:6px">'+logo+'</span><span>Mutirão GOL</span><span aria-hidden="true">↗</span></a></nav>').encode()
 
 def accepts_gzip(value):
     for item in value.lower().split(','):
@@ -47,6 +54,7 @@ def application(env,start_response):
         if path=='/central' and captured['status'].startswith('200 '):body=central_experience.prepare(body)
         if path in ('/nac','/nac/') and captured['status'].startswith('200 '):
             root=Path(__file__).parent/'nac'
+            body=body.replace(b'<main>',b'<main>'+campaign_navigation(),1)
             body=body.replace(b'</head>',('<style>'+(root/'gol_campaign.css').read_text()+'</style><script>'+(root/'gol_campaign.js').read_text()+'</script></head>').encode(),1)
 
         if path in ('/nac','/nac/','/resultados-cj','/pessoas') and captured['status'].startswith('200 '):body=body.replace(b'</head>',('<script>'+(Path(__file__).parent/'cj'/'loading.js').read_text()+'</script></head>').encode(),1)
