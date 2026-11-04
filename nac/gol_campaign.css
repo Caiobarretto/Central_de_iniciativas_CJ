@@ -14,3 +14,6 @@ body.gol-campaign{--wine:#e85b0c;--ink:#342e2b;--muted:#857b75;--line:#eee3db;--
 
 /* Entrada separada da campanha; o NAC continua sendo a visão padrão. */
 .gol-switch a.gol-link{display:inline-flex;align-items:center;gap:10px;padding:8px 14px 8px 9px;background:linear-gradient(110deg,#ff7b26,#eb5a08);border:1px solid #ef6b1b;color:#fff;box-shadow:0 4px 13px #ee6a1926;transition:transform .16s,box-shadow .16s}.gol-switch a.gol-link:hover{transform:translateY(-2px);box-shadow:0 7px 18px #ee6a1936}.gol-switch a.gol-link.active{box-shadow:0 0 0 3px #ffdbc4,0 5px 16px #ee6a192b}.gol-button-logo{position:relative;display:inline-block;flex:none;overflow:hidden;width:64px;height:28px;border-radius:6px;background:#fff}.gol-button-logo img{position:absolute;width:174px;max-width:none;height:auto;left:-55px;top:-15px}
+
+/* Logo original incorporada ao SVG; sem recorte por posições CSS ou requisição separada. */
+.gol-switch .gol-button-logo{box-sizing:border-box;display:grid;place-items:center;padding:4px 6px;width:64px;height:28px;overflow:hidden;background:#fff}.gol-switch .gol-button-logo .gol-brand{position:static;display:block;width:100%;height:100%;max-width:none;transform:none;margin:0;overflow:visible}.gol-logo-frame .gol-brand{position:static;display:block;width:136px;height:56px;max-width:none;transform:none;margin:0}
