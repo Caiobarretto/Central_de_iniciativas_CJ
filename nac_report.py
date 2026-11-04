@@ -39,6 +39,8 @@ def plan(connect,identity,admin,rows,c):
         for u in list_users(con):
             people.setdefault(u['email'],{'email':u['email'],'name':display(u['name'])})
             mapping[norm(u['name'].split('|')[0])]=u['email']
+    import nac_campaign
+    mapping.update({label:email for label,email in nac_campaign.aliases().items() if email in people})
     mapping.update({'arruda adv':'external:arruda','arruda':'external:arruda','igor':'external:igor','acordo - igor ribeiro pereira':'external:igor','igor ribeiro pereira':'external:igor','igor pereira':'external:igor'})
     for participant in reporting_roster(connect):
         people.setdefault(participant['email'],participant)
@@ -84,9 +86,15 @@ def commit(c,identity,plan):
     save_backup(c,identity,plan['revision'])
     months=plan['months']
     # Exact year/month scope; details are removed only for the affected agreements.
-    for month in months:
-        c.execute('DELETE FROM nac_details WHERE agreement_id IN (SELECT id FROM nac_agreements WHERE closed LIKE ?)',(month+'-%',))
-        c.execute('DELETE FROM nac_agreements WHERE closed LIKE ?',(month+'-%',))
+    if plan.get('campaign'):
+        import nac_campaign
+        for row in nac_campaign.saved(c):
+            c.execute('DELETE FROM nac_details WHERE agreement_id=?',(row['id'],))
+            c.execute('DELETE FROM nac_agreements WHERE id=?',(row['id'],))
+    else:
+        for month in months:
+            c.execute('DELETE FROM nac_details WHERE agreement_id IN (SELECT id FROM nac_agreements WHERE closed LIKE ?)',(month+'-%',))
+            c.execute('DELETE FROM nac_agreements WHERE closed LIKE ?',(month+'-%',))
     for start in range(0,len(agreements),50):
         batch=agreements[start:start+50]
         c.execute('INSERT INTO nac_agreements VALUES '+','.join(['('+','.join(['?']*12)+')']*len(batch)),tuple(v for row in batch for v in row))
@@ -94,7 +102,7 @@ def commit(c,identity,plan):
         batch=details[start:start+100]
         c.execute('INSERT INTO nac_details VALUES '+','.join(['(?,?)']*len(batch)),tuple(v for row in batch for v in row))
     c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
-    return 200,{'ok':True,'mode':'replace_months','months':plan['months'],'preserved':plan['preservedCount'],'imported':len(agreements),'total':len(agreements),'removed':plan['removedCount'],'skipped':len(plan['duplicates']),'revision':plan['revision']+1}
+    return 200,{'ok':True,'mode':plan['mode'],'months':plan['months'],'preserved':plan['preservedCount'],'imported':len(agreements),'total':len(agreements),'removed':plan['removedCount'],'skipped':len(plan['duplicates']),'revision':plan['revision']+1}
 
 def save_backup(c,identity,revision):
     backup={'agreements':[list(r) for r in c.execute('SELECT * FROM nac_agreements').fetchall()],
@@ -134,15 +142,23 @@ def recovery(connect,identity,data):
         c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
         return 200,{'ok':True,**summary,'revision':revision+1}
 
-def dashboard(connect,month,participant='',client=''):
+def dashboard(connect,month,participant='',client='',campaign=''):
     from nac_addon import month_value
     month=month_value(month);allowed={p['email']:p['name'] for p in reporting_roster(connect,month)}
     with connect() as c:
         rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.active=1 AND a.closed LIKE ? ORDER BY a.closed DESC,a.id',(month+'-%',)).fetchall()
+    import nac_campaign
+    if campaign:
+        if campaign!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
+        allowed.update({p['email']:p['name'] for p in nac_campaign.participants(connect)})
     records=[]
     for r in rows:
-        if r[1] not in allowed:continue
         extra=json.loads(r[6]) if r[6] else {}
+        if campaign:
+            key=nac_campaign.alias_name(extra.get('responsible',r[2]),allowed) or r[1]
+            if key!=r[1]:r=(r[0],key,*r[2:])
+        if r[1] not in allowed:continue
+        if campaign and (r[3]!=nac_campaign.config()['date'] or not nac_campaign.is_gol(r[5],extra)):continue
         records.append({'id':r[0],'email':r[1],'name':allowed[r[1]],'date':r[3],'reference':r[4],'client':r[5],**extra})
     clients=sorted({r['client'] for r in records if r.get('client')})
     records=[r for r in records if (not participant or r['email']==participant) and (not client or r['client']==client)]

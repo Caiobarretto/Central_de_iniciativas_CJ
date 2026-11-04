@@ -9,7 +9,14 @@ EXTRAS={
  'daniellerodrigues@queirozcavalcanti.adv.br':('Danielle Rodrigues',['Danielle Rodrigues','Danielle da Silva Rodrigues']),
  'rayannerocha@queirozcavalcanti.adv.br':('Rayanne Rocha',['Rayanne Rocha','Rayanne Aurora Alves da Rocha Oliveira'])}
 
-def config():return json.loads((ROOT/'gol_campaign.json').read_text())
+DEFAULT_CONFIG={'id': 'gol-20261106', 'title': 'Mutirão GOL', 'date': '2026-11-06', 'previewFrom': '2026-11-04', 'goal': 600, 'client': 'GOL', 'policyDate': '15/05/2025', 'timeZone': 'America/Sao_Paulo', 'notes': 'Meta exclusiva de acordos GOL com Data Preenchimento em 06/11/2026. Participantes extras temporários; cadastro e permissões da Central preservados.'}
+
+def config():
+ try:
+  value=json.loads((ROOT/'gol_campaign.json').read_text())
+  if isinstance(value,dict) and all(k in value for k in DEFAULT_CONFIG):return value
+ except (OSError,ValueError):pass
+ return dict(DEFAULT_CONFIG)
 def metadata():
  c=config();day=today()
  return {**c,'today':day,'autoActive':c['previewFrom']<=day<=c['date'],'registrationOpen':day==c['date'],'ended':day>c['date']}
@@ -83,4 +90,5 @@ def materials(name):
  allowed={'logo-gol.png':('image/png',False),'politica-travelbank.pptx':('application/vnd.openxmlformats-officedocument.presentationml.presentation',True),'minuta-travelbank.docx':('application/vnd.openxmlformats-officedocument.wordprocessingml.document',True),'politica-travelbank.pdf':('application/pdf',False),'minuta-travelbank.pdf':('application/pdf',False)}
  if name not in allowed:return None
  mime,download=allowed[name];path=ROOT/'gol'/name
+ if not path.is_file():return None
  return path.read_bytes(),mime,[('Content-Disposition',('attachment' if download else 'inline')+'; filename="'+name+'"')]

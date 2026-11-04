@@ -73,6 +73,12 @@ def text_field(data,key,limit):
 def agreement(connect,identity,admin,data):
     action=data.get('action','create');email=str(data.get('email','')).strip().lower();people={p['email']:p for p in roster(connect)}
     if action not in ('create','edit','cancel'):raise ValueError('Ação inválida.')
+    if data.get('campaign'):
+        import nac_campaign
+        if data['campaign']!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
+        if action=='create' and not nac_campaign.metadata()['registrationOpen']:return 403,{'error':'Os registros do mutirão estarão abertos somente em 06/11/2026.'}
+        people={p['email']:p for p in nac_campaign.participants(connect)}
+        if action!='cancel' and (data.get('date')!=nac_campaign.config()['date'] or not nac_campaign.is_gol(data.get('client',''))):raise ValueError('No mutirão, informe GOL e a data 06/11/2026.')
     if action!='create' and not admin:return 403,{'error':'Apenas o admin pode corrigir ou cancelar registros.'}
     if action=='create' and not admin:email=identity['email']
     if action!='cancel':
@@ -95,6 +101,7 @@ def agreement(connect,identity,admin,data):
             identifier=secrets.token_urlsafe(20)
         else:
             identifier=text_field(data,'id',100)
+            if data.get('campaign') and identifier not in {r['id'] for r in nac_campaign.saved(c)}:return 403,{'error':'Registro fora do mutirão GOL.'}
             old=c.execute('SELECT active,updated FROM nac_agreements WHERE id=?',(identifier,)).fetchone()
             if not old:return 404,{'error':'Registro não encontrado.'}
             if not old[0]:return 409,{'error':'Este registro já foi cancelado.'}
@@ -117,11 +124,29 @@ def application(env,start,server):
     try:
         identity=server.sso_auth.current(env,server.connect)
         if not identity:
-            if path in ('/nac','/nac/'):return reply(302,extra=[('Location','/')])
+            if path in ('/nac','/nac/','/nac/gol'):return reply(302,extra=[('Location','/')])
             return reply(401,{'error':'Entre na Central para acessar o painel NAC.'})
         admin_session=server.session(env);admin=bool(admin_session)
-        if path in ('/nac','/nac/'):
+        if path=='/api/nac/campaign':
             if method!='GET':return reply(405)
+            import nac_campaign
+            return reply(200,nac_campaign.metadata())
+        if path=='/api/nac/campaign/material':
+            if method!='GET':return reply(405)
+            import nac_campaign
+            name=parse_qs(env.get('QUERY_STRING','')).get('file',[''])[0];asset=nac_campaign.materials(name)
+            if not asset:return reply(404)
+            raw,mime,headers=asset
+            return reply(200,body=raw,mime=mime,extra=headers)
+        if path in ('/nac','/nac/','/nac/gol'):
+            if method!='GET':return reply(405)
+            campaign=parse_qs(env.get('QUERY_STRING','')).get('campaign',[''])[0]
+            if path!='/nac/gol' and campaign=='gol-20261106':return reply(302,extra=[('Location','/nac/gol')])
+            if path=='/nac/gol':
+                import nac_campaign
+                page=(ROOT/'nac'/'gol.html').read_text(encoding='utf-8')
+                page=page.replace('"__GOL_SERVER_CONFIG__"',json.dumps(nac_campaign.metadata(),ensure_ascii=True).replace('<','\u003c'))
+                return reply(200,body=page.encode(),mime='text/html; charset=utf-8')
             return reply(200,body=(ROOT/'nac'/'painel.html').read_bytes(),mime='text/html; charset=utf-8')
         if path=='/api/nac/template':
             if method!='GET':return reply(405)
@@ -130,9 +155,14 @@ def application(env,start,server):
             if method!='GET':return reply(405)
             import nac_report
             q=parse_qs(env.get('QUERY_STRING',''))
-            return reply(200,nac_report.dashboard(server.connect,q.get('month',[today()[:7]])[0],q.get('participant',[''])[0],q.get('client',[''])[0]))
+            return reply(200,nac_report.dashboard(server.connect,q.get('month',[today()[:7]])[0],q.get('participant',[''])[0],q.get('client',[''])[0],q.get('campaign',[''])[0]))
         if path=='/api/nac/state':
             if method!='GET':return reply(405)
+            import nac_campaign
+            campaign=parse_qs(env.get('QUERY_STRING','')).get('campaign',[''])[0]
+            if campaign:
+                if campaign!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
+                out=nac_campaign.state(server.connect,identity,admin);out['csrf']=identity.get('csrf','');out['adminCsrf']=admin_session[1] if admin_session else '';return reply(200,out)
             month=parse_qs(env.get('QUERY_STRING','')).get('month',[today()[:7]])[0]
             q=parse_qs(env.get('QUERY_STRING',''))
             if q.get('since'):
@@ -262,6 +292,9 @@ def import_plan(connect,identity,admin,rows,c):
         try:
             if any('[FÓRMULA NÃO ACEITA]' in str(v) for v in row):raise ValueError('A linha contém fórmula. Cole os resultados como valores antes de importar.')
             email=get('email').lower();label=get('name');candidates=name_map.get(norm(label),set()) if label else set()
+            import nac_campaign
+            known=nac_campaign.alias_name(label,people)
+            if known:candidates={known}
             if email and label and (len(candidates)!=1 or email not in candidates):raise ValueError('Nome e e-mail não correspondem à mesma negociadora.')
             if not email and len(candidates)==1:email=next(iter(candidates))
             if not email and not label and not admin:email=identity['email']
@@ -311,7 +344,12 @@ def import_agreements(connect,identity,admin,data):
         affected=[r for r in current if r[1][:7] in months and r[2]]
         incoming={(r['date'][:7],norm(r['reference'])) for r in plan['valid']}
         plan.update(mode='replace_months',months=months,revision=revision,currentCount=len(affected),preservedCount=sum(bool(r[2]) for r in current if r[1][:7] not in months),replacementCount=len(plan['valid']),removedCount=sum((r[1][:7],norm(r[0])) not in incoming for r in affected))
+        if data.get('campaign'):
+            import nac_campaign
+            if data['campaign']!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
+            nac_campaign.scope_import(plan,c)
         if action=='preview':return 200,plan
+        if data.get('campaign') and data.get('confirmCampaign') is not True:return 409,{'error':'Analise novamente e confirme o recorte do mutirão GOL.'}
         if data.get('replaceMonths') is not True or type(data.get('revision')) is not int or data['revision']!=revision:
             return 409,{'error':'Analise a planilha novamente e confirme a substituição somente dos meses indicados.'}
         return nac_report.commit(c,identity,plan)
