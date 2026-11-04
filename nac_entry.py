@@ -20,7 +20,10 @@ governance_results.setup(server.connect)
 vacation_approvals.setup(server.connect)
 original_admin_session=module_permissions.install(server)
 NAV='''<style>#nacModuleTab{position:relative;isolation:isolate;padding:10px 18px;border-radius:12px;font-weight:700;background:linear-gradient(120deg,#311353,#532275)!important;color:#fff!important;border:1px solid #a471db!important;box-shadow:0 0 12px #753aab66,0 0 26px #8f5bc433;overflow:visible}#nacModuleTab:before{content:'';position:absolute;inset:-3px;border-radius:inherit;border:1px solid #d2aff588;pointer-events:none;animation:nacHalo 3s ease-in-out infinite}#nacModuleTab:after{content:'\\2726';color:#e9ceff;position:absolute;top:-8px;right:5px;text-shadow:0 0 10px #fff;animation:nacSpark 2s ease-in-out infinite}@keyframes nacHalo{50%{box-shadow:0 0 18px #ae6ff0aa;opacity:.45}}@keyframes nacSpark{50%{opacity:.35;transform:scale(.7) rotate(25deg)}}@media(prefers-reduced-motion:reduce){#nacModuleTab:before,#nacModuleTab:after{animation:none}}</style><script data-nac-addon="1">(()=>{const nav=document.querySelector('.central-module-tabs');if(!nav||document.getElementById('nacModuleTab'))return;const button=document.createElement('button');button.type='button';button.id='nacModuleTab';button.textContent='Painel NAC';button.setAttribute('aria-label','Painel NAC');button.onclick=()=>{location.href='/nac'};nav.append(button)})();</script>'''.encode()
-ROUTES={'/nac','/nac/','/api/nac/state','/api/nac/agreements','/api/nac/goal','/api/nac/import','/api/nac/template','/api/nac/dashboard'}
+# Campanha com entrada própria na Central, sem ativação automática do NAC.
+GOL_NAV='''<style>#golCampaignTab{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:8px 14px;border:1px solid #ed6918;border-radius:12px;background:linear-gradient(110deg,#ff7b26,#eb5a08);color:#fff;font-weight:750;box-shadow:0 5px 15px #e8661930;cursor:pointer;transition:transform .16s,box-shadow .16s}#golCampaignTab:hover{transform:translateY(-2px);box-shadow:0 8px 20px #e8661940}#golCampaignTab:focus-visible{outline:3px solid #ffb578;outline-offset:3px}#golCampaignTab .gol-nav-logo{position:relative;display:inline-block;flex:none;overflow:hidden;width:64px;height:28px;border-radius:6px;background:#fff}#golCampaignTab img{position:absolute;width:174px;max-width:none;height:auto;left:-55px;top:-15px}@media(prefers-reduced-motion:reduce){#golCampaignTab{transition:none}}</style><script>(()=>{const nav=document.querySelector('.central-module-tabs');if(!nav||document.getElementById('golCampaignTab'))return;const b=document.createElement('button');b.type='button';b.id='golCampaignTab';b.setAttribute('aria-label','Abrir painel do Mutirão GOL');b.innerHTML='<span class="gol-nav-logo"><img src="/api/nac/campaign/material?file=logo-gol.png" alt="GOL"></span><span>Mutirão GOL</span><span aria-hidden="true">↗</span>';b.onclick=()=>{location.href='/nac?campaign=gol-20261106'};nav.append(b)})();</script>'''.encode()
+
+ROUTES={'/api/nac/campaign','/api/nac/campaign/material','/nac','/nac/','/api/nac/state','/api/nac/agreements','/api/nac/goal','/api/nac/import','/api/nac/template','/api/nac/dashboard'}
 
 def accepts_gzip(value):
     for item in value.lower().split(','):
@@ -44,9 +47,13 @@ def application(env,start_response):
         finally:
             if hasattr(response,'close'):response.close()
         if path=='/central' and captured['status'].startswith('200 '):body=central_experience.prepare(body)
+        if path in ('/nac','/nac/') and captured['status'].startswith('200 '):
+            root=Path(__file__).parent/'nac'
+            body=body.replace(b'</head>',('<style>'+(root/'gol_campaign.css').read_text()+'</style><script>'+(root/'gol_campaign.js').read_text()+'</script></head>').encode(),1)
+
         if path in ('/nac','/nac/','/resultados-cj','/pessoas') and captured['status'].startswith('200 '):body=body.replace(b'</head>',('<script>'+(Path(__file__).parent/'cj'/'loading.js').read_text()+'</script></head>').encode(),1)
         headers=captured['headers'];is_html=any(k.lower()=='content-type' and 'text/html' in v for k,v in headers)
-        if path=='/central' and captured['status'].startswith('200 ') and is_html:body=body.replace(b'</body>',NAV+b'</body>',1)
+        if path=='/central' and captured['status'].startswith('200 ') and is_html:body=body.replace(b'</body>',NAV+GOL_NAV+b'</body>',1)
         if path in ('/central','/nac','/nac/') and captured['status'].startswith('200 ') and is_html:
             assets=Path(__file__).parent/'nac'
             scripts=(('<script>'+ (assets/'people_admin.js').read_text()+'</script>') if path=='/central' else '')+'<script>'+(assets/'celebration.js').read_text()+'</script>'
