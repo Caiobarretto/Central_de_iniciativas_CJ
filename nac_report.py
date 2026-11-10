@@ -151,6 +151,11 @@ def dashboard(connect,month,participant='',client='',campaign=''):
     if campaign:
         if campaign!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
         allowed.update({p['email']:p['name'] for p in nac_campaign.participants(connect)})
+    if campaign:
+        allowed.update({p['email']:p['name'] for p in reporting_roster(connect)})
+        allowed.update({p['email']:p['name'] for p in nac_campaign.participants(connect)})
+        with connect() as c:
+            rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.active=1 AND (a.closed=? OR d.data LIKE ?) ORDER BY a.closed DESC,a.id',(nac_campaign.config()['date'],'%'+campaign+'%')).fetchall()
     records=[]
     for r in rows:
         extra=json.loads(r[6]) if r[6] else {}

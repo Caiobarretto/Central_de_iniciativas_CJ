@@ -22,6 +22,7 @@ def setup(connect):
         c.execute('CREATE TABLE IF NOT EXISTS nac_goals (month TEXT PRIMARY KEY,target INTEGER NOT NULL)')
         import nac_report
         nac_report.setup(c)
+        c.execute('CREATE TABLE IF NOT EXISTS nac_campaign_settings (id TEXT PRIMARY KEY,registration_open INTEGER NOT NULL,actor TEXT NOT NULL,updated DOUBLE PRECISION NOT NULL)')
     import nac_people
     nac_people.setup(connect)
 def lock(c):c.execute('LOCK TABLE nac_meta,nac_agreements,nac_goals,nac_details IN EXCLUSIVE MODE' if hasattr(c,'connection') else 'BEGIN IMMEDIATE')
@@ -76,9 +77,9 @@ def agreement(connect,identity,admin,data):
     if data.get('campaign'):
         import nac_campaign
         if data['campaign']!=nac_campaign.config()['id']:raise ValueError('Campanha inválida.')
-        if action=='create' and not nac_campaign.metadata()['registrationOpen']:return 403,{'error':'Os registros do mutirão ficam disponíveis de 04/11 a 06/11/2026.'}
+        if action=='create' and not nac_campaign.metadata(connect)['registrationOpen']:return 403,{'error':'Os registros da campanha estão encerrados. Peça ao admin NAC para reabrir.'}
         people={p['email']:p for p in nac_campaign.participants(connect)}
-        if action!='cancel' and (not isinstance(data.get('date'),str) or not nac_campaign.config()['previewFrom']<=data['date']<=nac_campaign.config()['date'] or not nac_campaign.is_gol(data.get('client',''))):raise ValueError('No mutirão, informe GOL e a data real do fechamento, entre 04/11 e 06/11/2026.')
+        if action!='cancel' and (not isinstance(data.get('date'),str) or not nac_campaign.is_gol(data.get('client',''))):raise ValueError('Informe GOL e a data real do fechamento.')
     if action!='create' and not admin:return 403,{'error':'Apenas o admin pode corrigir ou cancelar registros.'}
     if action=='create' and not admin:email=identity['email']
     if action!='cancel':
@@ -93,6 +94,9 @@ def agreement(connect,identity,admin,data):
     with connect() as c:
         lock(c)
         revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
+        if action=='create' and data.get('campaign'):
+            flag=c.execute('SELECT registration_open FROM nac_campaign_settings WHERE id=?',(data['campaign'],)).fetchone()
+            if flag and not flag[0]:return 403,{'error':'Os registros da campanha estão encerrados. Peça ao admin NAC para reabrir.'}
         if action=='create':
             old=c.execute('SELECT id,created_by FROM nac_agreements WHERE request_key=?',(request_key,)).fetchone()
             if old:
@@ -133,10 +137,9 @@ def application(env,start,server):
             if path in ('/nac','/nac/','/nac/gol'):return reply(302,extra=[('Location','/')])
             return reply(401,{'error':'Entre na Central para acessar o painel NAC.'})
         admin_session=server.session(env);admin=bool(admin_session)
-        if path=='/api/nac/campaign':
-            if method!='GET':return reply(405)
+        if path=='/api/nac/campaign' and method=='GET':
             import nac_campaign
-            return reply(200,nac_campaign.metadata())
+            return reply(200,nac_campaign.metadata(server.connect))
         if path=='/api/nac/campaign/material':
             if method!='GET':return reply(405)
             import nac_campaign
@@ -151,7 +154,7 @@ def application(env,start,server):
             if path=='/nac/gol':
                 import nac_campaign
                 page=(ROOT/'nac'/'gol.html').read_text(encoding='utf-8')
-                page=page.replace('"__GOL_SERVER_CONFIG__"',json.dumps(nac_campaign.metadata(),ensure_ascii=True).replace('<','\u003c'))
+                page=page.replace('"__GOL_SERVER_CONFIG__"',json.dumps(nac_campaign.metadata(server.connect),ensure_ascii=True).replace('<','\u003c'))
                 return reply(200,body=page.encode(),mime='text/html; charset=utf-8')
             return reply(200,body=(ROOT/'nac'/'painel.html').read_bytes(),mime='text/html; charset=utf-8')
         if path=='/api/nac/template':
@@ -184,6 +187,9 @@ def application(env,start,server):
         if not 0<size<=(7_100_000 if path=='/api/nac/import' else 10000) or 'application/json' not in env.get('CONTENT_TYPE',''):raise ValueError('Dados inválidos.')
         data=json.loads(env['wsgi.input'].read(size))
         if not isinstance(data,dict):raise ValueError('Dados inválidos.')
+        if path=='/api/nac/campaign':
+            import nac_campaign
+            code,out=nac_campaign.set_registration(server.connect,identity,admin,data);return reply(code,out)
         if path=='/api/nac/import':
             code,out=import_agreements(server.connect,identity,admin,data);return reply(code,out)
         if path=='/api/nac/agreements':

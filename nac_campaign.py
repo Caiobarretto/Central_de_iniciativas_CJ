@@ -19,9 +19,24 @@ def config():
   if isinstance(value,dict) and all(k in value for k in DEFAULT_CONFIG):return value
  except (OSError,ValueError):pass
  return dict(DEFAULT_CONFIG)
-def metadata():
- c=config();day=today()
- return {**c,'today':day,'autoActive':c['previewFrom']<=day<=c['date'],'registrationOpen':c['previewFrom']<=day<=c['date'],'ended':day>c['date']}
+def metadata(connect=None):
+ c=config();opened=True
+ if connect:
+  with connect() as db:
+   row=db.execute('SELECT registration_open FROM nac_campaign_settings WHERE id=?',(c['id'],)).fetchone()
+   if row:opened=bool(row[0])
+ return {**c,'today':today(),'autoActive':False,'registrationOpen':opened,'ended':not opened,'dateLimited':False}
+
+def set_registration(connect,identity,admin,data):
+ if not admin:return 403,{'error':'Apenas o admin NAC pode abrir ou encerrar registros.'}
+ if data.get('action')!='registration' or type(data.get('open')) is not bool:raise ValueError('Informe se os registros devem ficar abertos.')
+ from nac_addon import lock
+ with connect() as c:
+  lock(c);revision=c.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0]
+  if type(data.get('revision')) is not int or data['revision']!=revision:return 409,{'error':'O painel mudou. Atualize antes de alterar a abertura.'}
+  c.execute('INSERT INTO nac_campaign_settings VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET registration_open=excluded.registration_open,actor=excluded.actor,updated=excluded.updated',(config()['id'],int(data['open']),identity['email'],time.time()))
+  c.execute('UPDATE nac_meta SET revision=revision+1 WHERE id=1')
+ return 200,{'ok':True,'registrationOpen':data['open'],'revision':revision+1}
 
 def aliases():return {norm(name):email for email,(_,names) in EXTRAS.items() for name in names}
 def alias_name(label,people):
@@ -50,10 +65,10 @@ def is_gol(client,extra=None):
  values=[client]+[extra.get(k,'') for k in ('client','costCenter','cell')]
  return any(re.search(r'\bgol\b',norm(v)) for v in values)
 
-def matches(row):return row['date']==config()['date'] and is_gol(row.get('client',''),row.get('extra'))
+def matches(row):return is_gol(row.get('client',''),row.get('extra'))
 def saved(c):
  campaign=config()
- rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,a.note,a.created,a.updated,a.active,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.closed>=? AND a.closed<=?',(campaign['previewFrom'],campaign['date'])).fetchall()
+ rows=c.execute('SELECT a.id,a.email,a.name,a.closed,a.reference,a.client,a.note,a.created,a.updated,a.active,d.data FROM nac_agreements a LEFT JOIN nac_details d ON d.agreement_id=a.id WHERE a.closed=? OR d.data LIKE ?',(campaign['date'],'%'+campaign['id']+'%')).fetchall()
  result=[]
  for r in rows:
   extra=json.loads(r[10]) if r[10] else {}
@@ -65,7 +80,7 @@ def canonical(row,people):
  return row['email'] if row['email'] in people else alias_name(row['extra'].get('responsible',row['name']),people) or row['email']
 
 def state(connect,identity,admin):
- c=metadata();people={p['email']:p for p in participants(connect)}
+ c=metadata(connect);people={p['email']:p for p in participants(connect)}
  with connect() as con:
   revision=con.execute('SELECT revision FROM nac_meta WHERE id=1').fetchone()[0];rows=saved(con)
  totals={};today_counts={};latest=0
@@ -82,7 +97,7 @@ def state(connect,identity,admin):
   if p['count']!=last:rank=i+1;last=p['count']
   p['rank']=rank
  visible=sorted((r for r in rows if admin or r['active']),key=lambda r:(r['created'],r['id']),reverse=True)[:100]
- return {'campaign':c,'revision':revision,'month':c['date'][:7],'today':today(),'serverTime':time.time(),'dateBasis':'Mutirão GOL · relatório de '+c['date']+' e registros vinculados à campanha','goal':c['goal'],'total':sum(totals.values()),'todayCount':sum(today_counts.values()),'ranking':ranking,'roster':list(people.values()),'records':[{k:v for k,v in r.items() if k!='extra'} for r in visible],'canAdmin':admin,'canImport':admin,'canRegister':c['registrationOpen'] and (admin or identity['email'] in {p['email'] for p in participants(connect)}),'user':{'email':identity['email'],'name':display(identity['name'])},'latest':latest}
+ return {'campaign':c,'revision':revision,'month':c['date'][:7],'today':today(),'serverTime':time.time(),'dateBasis':'Campanha GOL · datas reais dos acordos','goal':c['goal'],'total':sum(totals.values()),'todayCount':sum(today_counts.values()),'ranking':ranking,'roster':list(people.values()),'records':[{k:v for k,v in r.items() if k!='extra'} for r in visible],'canAdmin':admin,'canImport':admin,'canRegister':c['registrationOpen'] and (admin or identity['email'] in {p['email'] for p in participants(connect)}),'user':{'email':identity['email'],'name':display(identity['name'])},'latest':latest}
 
 def scope_import(plan,c):
  current=saved(c);tagged={(norm(r['reference']),r['date']) for r in current if r['extra'].get('campaignId')==config()['id']}
@@ -90,7 +105,7 @@ def scope_import(plan,c):
  for row in plan['valid']:
   manual=(norm(row['reference']),row['date']) in tagged and is_gol(row['client'],row.get('extra'))
   if matches(row) or manual:
-   if manual:row.setdefault('extra',{})['campaignId']=config()['id']
+   row.setdefault('extra',{})['campaignId']=config()['id']
    if row['email'] in EXTRAS:row['name']=EXTRAS[row['email']][0]
    accepted.append(row)
  excluded=len(plan['valid'])-len(accepted)
